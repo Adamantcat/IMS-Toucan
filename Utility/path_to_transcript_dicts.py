@@ -367,3 +367,33 @@ def build_path_to_transcript_dict_3xljspeech():
         wav_path = "/mount/arbeitsdaten/synthesis/attention_projects/LJSpeech_3xlong_stripped/wav_long/" + transcript_file.rstrip(".txt") + ".wav"
         path_to_transcript[wav_path] = transcript
     return path_to_transcript
+
+def build_path_to_transcript_dict_toni():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript
+
+def build_path_to_transcript_dict_zischler():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Interspeech_2022/train"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")                        
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript

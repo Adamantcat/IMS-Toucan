@@ -2,6 +2,7 @@ import argparse
 import sys
 
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_Karlsson import run as karlsson
+from TrainingInterfaces.TrainingPipelines.FastSpeech2_Zischler import run as zischler
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_LJ import run as lj
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_LJ_long import run as lj_long
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_LibriTTS import run as libri
@@ -15,6 +16,7 @@ pipeline_dict = {
     "libri"        : libri,
     "meta"         : meta_fast,
     "karlsson"     : karlsson,
+    "zischler"     : zischler,
     "lj"           : lj,
     "lj_long"      : lj_long,
     "hifi_combined": hifigan_combined,

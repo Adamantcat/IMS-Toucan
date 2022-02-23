@@ -61,4 +61,4 @@ if __name__ == '__main__':
     exec_device = "cuda" if torch.cuda.is_available() else "cpu"
     os.makedirs("audios", exist_ok=True)
 
-    read_texts(model_id="Meta", sentence="Hello World.", filename="audios/read_speech.wav", device="cpu", language="en")
+    read_texts(model_id="Zischler", sentence="Quellen hattest du ihm, hattest dem Flüchtigen~Kühle Schatten geschenkt", filename="audios/test_zischler.wav", device="cpu", language="de")
