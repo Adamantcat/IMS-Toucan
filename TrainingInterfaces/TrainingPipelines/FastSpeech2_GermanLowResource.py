@@ -4,7 +4,7 @@ import soundfile
 import torch
 
 from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.FastSpeech2 import FastSpeech2
-from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.low_resource_fastspeech2_train_loop import train_loop
+from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.fastspeech2_train_loop import train_loop
 from Utility.corpus_preparation import prepare_fastspeech_corpus
 from Utility.path_to_transcript_dicts import *
 
@@ -66,8 +66,8 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume):
                steps=10000,
                batch_size=32,
                lang="de",
-               lr=0.001,
-               epochs_per_save=2,
-               path_to_checkpoint=resume_checkpoint,
-               fine_tune=finetune,
+               lr=0.0001,
+               epochs_per_save=20,
+               path_to_checkpoint="Models/FastSpeech2_Meta_no_ger/best.pt",
+               fine_tune=True,
                resume=resume)
