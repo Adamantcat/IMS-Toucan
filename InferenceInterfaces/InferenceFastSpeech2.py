@@ -3,6 +3,7 @@ import os
 
 import librosa.display as lbd
 import matplotlib.pyplot as plt
+import noisereduce
 import sounddevice
 import soundfile
 import torch
@@ -16,7 +17,7 @@ from Preprocessing.ProsodicConditionExtractor import ProsodicConditionExtractor
 
 class InferenceFastSpeech2(torch.nn.Module):
 
-    def __init__(self, device="cpu", model_name="Meta", language="en"):
+    def __init__(self, device="cpu", model_name="Meta", language="en", noise_reduce=True):
         super().__init__()
         self.device = device
         self.text2phone = ArticulatoryCombinedTextFrontend(language=language, add_silence_to_end=True)
@@ -34,6 +35,11 @@ class InferenceFastSpeech2(torch.nn.Module):
         self.mel2wav.eval()
         self.lang_id = get_language_id(language)
         self.to(torch.device(device))
+        self.noise_reduce = noise_reduce
+        if self.noise_reduce:
+            self.noise_reduce = False
+            self.prototypical_noise = self("~." * 100, input_is_phones=True).cpu().numpy()
+            self.noise_reduce = True
 
     def set_utterance_embedding(self, path_to_reference_audio):
         wave, sr = soundfile.read(path_to_reference_audio)
@@ -46,9 +52,9 @@ class InferenceFastSpeech2(torch.nn.Module):
         self.text2phone = ArticulatoryCombinedTextFrontend(language=lang_id, add_silence_to_end=True)
         self.lang_id = get_language_id(lang_id).to(self.device)
 
-    def forward(self, text, view=False, durations=None, pitch=None, energy=None):
+    def forward(self, text, view=False, durations=None, pitch=None, energy=None, input_is_phones=False):
         with torch.inference_mode():
-            phones = self.text2phone.string_to_tensor(text).to(torch.device(self.device))
+            phones = self.text2phone.string_to_tensor(text, input_phonemes=input_is_phones).to(torch.device(self.device))
             mel, durations, pitch, energy = self.phone2mel(phones,
                                                            return_duration_pitch_energy=True,
                                                            utterance_embedding=self.default_utterance_embedding,
@@ -78,6 +84,8 @@ class InferenceFastSpeech2(torch.nn.Module):
             ax[0].set_title(text)
             plt.subplots_adjust(left=0.05, bottom=0.1, right=0.95, top=.9, wspace=0.0, hspace=0.0)
             plt.show()
+        if self.noise_reduce:
+            wave = torch.tensor(noisereduce.reduce_noise(y=wave, y_noise=self.prototypical_noise, sr=48000, stationary=True))
         return wave
 
     def read_to_file(self, text_list, file_location, silent=False, dur_list=None, pitch_list=None, energy_list=None):
