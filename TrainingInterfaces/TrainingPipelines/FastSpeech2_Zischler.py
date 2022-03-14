@@ -46,12 +46,12 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume):
                train_dataset=train_set,
                device=device,
                save_directory=save_dir,
-               steps=100000,
+               steps=5000,
                batch_size=32,
                lang="de",
                lr=0.001,
                epochs_per_save=10,
                warmup_steps=4000,
-               path_to_checkpoint=resume_checkpoint, # Models/FastSpeech2_Karlsson/best.pt
+               path_to_checkpoint=resume_checkpoint, # Models/FastSpeech2_German/best.pt
                fine_tune=finetune,
                resume=resume)
