@@ -37,13 +37,19 @@ class InferenceFastSpeech2(torch.nn.Module):
         self.to(torch.device(device))
         self.noise_reduce = noise_reduce
         if self.noise_reduce:
-            self.noise_reduce = False
-            self.prototypical_noise = self("~." * 100, input_is_phones=True).cpu().numpy()
-            self.noise_reduce = True
+            self.prototypical_noise = None
+            self.update_noise_profile()
 
     def set_utterance_embedding(self, path_to_reference_audio):
         wave, sr = soundfile.read(path_to_reference_audio)
         self.default_utterance_embedding = ProsodicConditionExtractor(sr=sr).extract_condition_from_reference_wave(wave).to(self.device)
+        if self.noise_reduce:
+            self.update_noise_profile()
+
+    def update_noise_profile(self):
+        self.noise_reduce = False
+        self.prototypical_noise = self("~." * 100, input_is_phones=True).cpu().numpy()
+        self.noise_reduce = True
 
     def set_language(self, lang_id):
         """
@@ -85,14 +91,18 @@ class InferenceFastSpeech2(torch.nn.Module):
             plt.subplots_adjust(left=0.05, bottom=0.1, right=0.95, top=.9, wspace=0.0, hspace=0.0)
             plt.show()
         if self.noise_reduce:
-            wave = torch.tensor(noisereduce.reduce_noise(y=wave, y_noise=self.prototypical_noise, sr=48000, stationary=True))
+            wave = torch.tensor(noisereduce.reduce_noise(y=wave.cpu().numpy(), y_noise=self.prototypical_noise, sr=48000, stationary=True), device=self.device)
         return wave
 
     def read_to_file(self, text_list, file_location, silent=False, dur_list=None, pitch_list=None, energy_list=None):
         """
-        :param silent: Whether to be verbose about the process
-        :param text_list: A list of strings to be read
-        :param file_location: The path and name of the file it should be saved to
+        Args:
+            silent: Whether to be verbose about the process
+            text_list: A list of strings to be read
+            file_location: The path and name of the file it should be saved to
+            energy_list: list of energy tensors to be used for the texts
+            pitch_list: list of pitch tensors to be used for the texts
+            dur_list: list of duration tensors to be used for the texts
         """
         if not dur_list:
             dur_list = []
