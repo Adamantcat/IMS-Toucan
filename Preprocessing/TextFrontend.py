@@ -221,20 +221,24 @@ class ArticulatoryCombinedTextFrontend:
         # languages use different tones denoted by different numbering
         # systems. At this point in the script, it is attempted to unify
         # them all to the tones in the IPA standard.
-        if self.g2p_lang == "cmn-latn-pinyin":
+        if self.g2p_lang == "cmn-latn-pinyin" or self.g2p_lang == "cmn":
             phones = phones.replace(".", "")  # no idea why espeak puts dots everywhere for Chinese
             phones = phones.replace('1', "˥")
             phones = phones.replace('2', "˧\u030C")
             phones = phones.replace('ɜ', "˨\u0302\u030C")  # I'm fairly certain that this is a bug in espeak and ɜ is meant to be 3
+            phones = phones.replace('3', "˨\u0302\u030C")  # I'm fairly certain that this is a bug in espeak and ɜ is meant to be 3
             phones = phones.replace('4', "˦\u0302")
             phones = phones.replace('5', "˧")
             phones = phones.replace('0', "˧")
         if self.g2p_lang == "vi":
+            phones = phones.replace('1', "˧")
             phones = phones.replace('2', "˩\u0302")
             phones = phones.replace('ɜ', "˧\u030C")  # I'm fairly certain that this is a bug in espeak and ɜ is meant to be 3
+            phones = phones.replace('3', "˧\u030C")  # I'm fairly certain that this is a bug in espeak and ɜ is meant to be 3
             phones = phones.replace('4', "˧\u0302\u030C")
             phones = phones.replace('5', "˧\u030C")
             phones = phones.replace('6', "˧\u0302")
+            phones = phones.replace('7', "˧")
         replacements = [
             # punctuation in languages with non-latin script
             ("。", "."),
@@ -250,6 +254,7 @@ class ArticulatoryCombinedTextFrontend:
             # latin script punctuation
             ("/", " "),
             ("—", ""),
+            ("...", "…"),
             ("\n", " "),
             ("\t", " "),
             ("¡", ""),
@@ -277,7 +282,7 @@ class ArticulatoryCombinedTextFrontend:
             (":", "~"),
             (";", "~"),
             (",", "~")  # make sure this remains the final one when adding new ones
-            ]
+        ]
         unsupported_ipa_characters = {'̹', '̙', '̞', '̯', '̤', '̪', '̩', '̠', '̟', 'ꜜ',
                                       '̃', '̬', '̽', 'ʰ', '|', '̝', '•', 'ˠ', '↘',
                                       '‖', '̰', '‿', 'ᷝ', '̈', 'ᷠ', '̜', 'ʷ', 'ʲ',
@@ -299,7 +304,7 @@ class ArticulatoryCombinedTextFrontend:
                 ("˩", ""),  # very low tone
                 ('\u030C', ""),  # rising tone
                 ('\u0302', "")  # falling tone
-                ]
+            ]
         for replacement in replacements:
             phones = phones.replace(replacement[0], replacement[1])
         phones = re.sub("~+", "~", phones)
