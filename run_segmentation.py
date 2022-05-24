@@ -34,7 +34,7 @@ def split_text(text, n=10):
 def split_audio(audio_path, text_path, out_dir, max_num_lines=10, n=20):
     # loading modules
     acoustic_model = Aligner()
-    acoustic_model.load_state_dict(torch.load("Models/Aligner/aligner.pt", map_location='cpu')["asr_model"])
+    acoustic_model.load_state_dict(torch.load("Models/Aligner_Toni/aligner.pt", map_location='cpu')["asr_model"])
     dc = DurationCalculator(reduction_factor=1)
     tf = ArticulatoryCombinedTextFrontend(language="de")
     vad = VoiceActivityDetection(sample_rate=16000, trigger_time=0.0001, trigger_level=3.0, pre_trigger_time=0.2)

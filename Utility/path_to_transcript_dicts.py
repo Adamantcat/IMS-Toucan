@@ -519,3 +519,19 @@ def build_path_to_transcript_dict_VIVOS_viet():
             audio_file = f"{root}/waves/{parsed_line[0][:10]}/{parsed_line[0]}.wav"
             path_to_transcript_dict[audio_file] = " ".join(parsed_line[1:]).lower()
     return path_to_transcript_dict
+
+
+def build_path_to_transcript_dict_toni():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_Zeilenweise"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript

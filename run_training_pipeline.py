@@ -7,6 +7,7 @@ from TrainingInterfaces.TrainingPipelines.FastSpeech2_MetaCheckpoint import run 
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_finetune_to_German import run as fine_ger
 from TrainingInterfaces.TrainingPipelines.HiFiGAN_combined import run as hifigan_combined
 from TrainingInterfaces.TrainingPipelines.pretrain_aligner import run as aligner
+from TrainingInterfaces.TrainingPipelines.finetune_aligner_Toni import run as aligner_toni
 
 pipeline_dict = {
     "meta": meta_fast,
@@ -14,7 +15,8 @@ pipeline_dict = {
     "aligner": aligner,
     "fine_ger": fine_ger,
     "integration_test": integration_test,
-    "integration_test_vietnamese": integration_test_vietnamese
+    "integration_test_vietnamese": integration_test_vietnamese,
+    "aligner_toni": aligner_toni
 }
 
 if __name__ == '__main__':
