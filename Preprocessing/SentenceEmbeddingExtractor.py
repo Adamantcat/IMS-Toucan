@@ -4,8 +4,8 @@ from transformers import BertTokenizer, BertModel
 
 class SentenceEmbeddingExtractor:
 
-    def __init__(self, language="en", device=torch.device("cpu")):
-        #TODO: How to handle unsupported languages
+    def __init__(self, device=torch.device("cpu")):
+        #TODO: Do we need to handle unsupported languages?
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
         self.bert = BertModel.from_pretrained("bert-base-multilingual-cased")
         self.device = device

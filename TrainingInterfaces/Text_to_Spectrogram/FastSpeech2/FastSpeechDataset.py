@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
+from Preprocessing.SentenceEmbeddingExtractor import SentenceEmbeddingExtractor
 from Preprocessing.ProsodicConditionExtractor import ProsodicConditionExtractor
 from Preprocessing.TextFrontend import get_language_id
 from TrainingInterfaces.Text_to_Spectrogram.AutoAligner.Aligner import Aligner
@@ -68,6 +69,7 @@ class FastSpeechDataset(Dataset):
             vis_dir = os.path.join(cache_dir, "duration_vis")
             os.makedirs(vis_dir, exist_ok=True)
             pros_cond_ext = ProsodicConditionExtractor(sr=16000, device=device)
+            sent_emb_ext = SentenceEmbeddingExtractor(device=device)
 
             for index in tqdm(range(len(dataset))):
                 norm_wave = norm_waves[index]
@@ -137,6 +139,8 @@ class FastSpeechDataset(Dataset):
                 except RuntimeError:
                     # if there is an audio without any voiced segments whatsoever we have to skip it.
                     continue
+
+                
 
                 self.datapoints.append([dataset[index][0],
                                         dataset[index][1],
