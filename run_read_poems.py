@@ -9,16 +9,16 @@ if __name__ == '__main__':
 
     tts_prosa = InferenceFastSpeech2(device=exec_device, model_name='German', noise_reduce=True)
     tts_prosa.set_language('de')
-    tts_prosa.set_utterance_embedding("audios/references/toni.wav")
+    tts_prosa.set_utterance_embedding("audios/references/karlsson.wav")
 
     tts_poetry = InferenceFastSpeech2(device=exec_device, model_name='Wunderhorn', noise_reduce=True)
     tts_poetry.set_language('de')
-    tts_prosa.set_utterance_embedding("audios/references/toni.wav")
+    tts_prosa.set_utterance_embedding("audios/references/karlsson.wav")
 
     for poem in os.listdir("/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_2/Test"):
         print(poem)
-        out_dir_prose = f"audios/test/prose/{poem}"
-        out_dir_poetry = f"audios/test/poetry/{poem}"
+        out_dir_prose = f"audios/test/Karlsson/prose/{poem}"
+        out_dir_poetry = f"audios/test/Karlsson/poetry/{poem}"
         os.makedirs(out_dir_prose, exist_ok=True)
         os.makedirs(out_dir_poetry, exist_ok=True)
 
