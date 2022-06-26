@@ -5,9 +5,10 @@ from TrainingInterfaces.TrainingPipelines.FastSpeech2_IntegrationTest import run
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_IntegrationTestVietnamese import run as integration_test_vietnamese
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_MetaCheckpoint import run as meta_fast
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_finetune_to_German import run as fine_ger
+from TrainingInterfaces.TrainingPipelines.FastSpeech2_German_Mono import run as fast_ger_mono
+from TrainingInterfaces.TrainingPipelines.FastSpeech2_Wunderhorn import run as fast_wunderhorn
 from TrainingInterfaces.TrainingPipelines.HiFiGAN_combined import run as hifigan_combined
 from TrainingInterfaces.TrainingPipelines.pretrain_aligner import run as aligner
-from TrainingInterfaces.TrainingPipelines.finetune_aligner_Toni import run as aligner_toni
 
 pipeline_dict = {
     "meta": meta_fast,
@@ -16,7 +17,8 @@ pipeline_dict = {
     "fine_ger": fine_ger,
     "integration_test": integration_test,
     "integration_test_vietnamese": integration_test_vietnamese,
-    "aligner_toni": aligner_toni
+    "fast_ger_mono": fast_ger_mono,
+    "fast_wunderhorn": fast_wunderhorn
 }
 
 if __name__ == '__main__':

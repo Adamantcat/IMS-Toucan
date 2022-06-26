@@ -14,6 +14,12 @@ from TrainingInterfaces.Text_to_Spectrogram.AutoAligner.Aligner import Aligner
 from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.DurationCalculator import DurationCalculator
 
 
+# def split_text(text, n=10):
+#     lines = [s for s in text.split("\n") if s.lstrip().rstrip()]
+#     print(lines)
+#     return lines
+
+
 def split_text(text, n=10):
     stanzas = text.split('\n\n')
     cutted = []
@@ -34,9 +40,10 @@ def split_text(text, n=10):
 def split_audio(audio_path, text_path, out_dir, max_num_lines=10, n=20):
     # loading modules
     acoustic_model = Aligner()
-    acoustic_model.load_state_dict(torch.load("Models/Aligner_Toni/aligner.pt", map_location='cpu')["asr_model"])
+    # acoustic_model.load_state_dict(torch.load("Models/Aligner/aligner.pt", map_location='cpu')["asr_model"])
+    acoustic_model.load_state_dict(torch.load("Corpora/Karlsson/aligner/aligner.pt", map_location='cpu')["asr_model"])
     dc = DurationCalculator(reduction_factor=1)
-    tf = ArticulatoryCombinedTextFrontend(language="de")
+    tf = ArticulatoryCombinedTextFrontend(language="de", use_word_boundaries=False)
     vad = VoiceActivityDetection(sample_rate=16000, trigger_time=0.0001, trigger_level=3.0, pre_trigger_time=0.2)
 
     os.makedirs(out_dir, exist_ok=True)
@@ -57,7 +64,8 @@ def split_audio(audio_path, text_path, out_dir, max_num_lines=10, n=20):
         stanzas = [s.replace('\n', ' ') for s in stanzas]
 
         for line in stanzas:
-            lines.append(tf.string_to_tensor(line, handle_missing=False).squeeze())
+            lines.append(tf.string_to_tensor(line, handle_missing=False, view=False).squeeze())
+    
     # postprocess phonemes: [~ sentence ~ #] --> [sentence ~] except for the first one, which is [~ sentence ~]
     processed_lines = list()
     for index, line in enumerate(lines):
@@ -123,16 +131,30 @@ if __name__ == '__main__':
     txt_root = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/txt/Wunderhorn"
     audio_root = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/wavs/Wunderhorn"
 
-    for wav in os.listdir(audio_root):
-        poem = wav.split('.')[0]
-        print(poem)
-        audio_path = os.path.join(audio_root, wav)
-        text_path = os.path.join(txt_root, f"{poem}.txt")
-        out_dir = os.path.join("/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data", poem)
-        split_audio(audio_path, text_path, out_dir, max_num_lines=4, n=10)
+    # for wav in tqdm(os.listdir(audio_root)):
+    #     if not os.path.isfile(os.path.join(audio_root, wav)):
+    #         continue
+    #     poem = wav.split('.')[0]
+    #     if poem.startswith('W3_K'):
+    #         continue
+        
+    #     audio_path = os.path.join(audio_root, wav)
+    #     text_path = os.path.join(txt_root, f"{poem}.txt")
+    #     out_dir = os.path.join("/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_2", poem)
+    #     if os.path.exists(out_dir):
+    #         print(f"{poem} already exists")
+    #         continue
+    #     print(poem)       
+    #     split_audio(audio_path, text_path, out_dir, max_num_lines=2, n=3)
 
-    # audio_path = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/wavs/Wunderhorn/W3_K_027_Der_wunderliche_Kittel.wav"
-    # text_path = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/txt/Wunderhorn/W3_K_027_Der_wunderliche_Kittel.txt"
-    # out_dir = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/Test"
+    poem = "W3_001_Liebesklagen_des_Maedchens"
+    audio_path = os.path.join(audio_root, f"{poem}.wav")
+    text_path = os.path.join(txt_root, f"{poem}.txt")
+    out_dir = os.path.join("/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_2", poem)
+ 
+    split_audio(audio_path, text_path, out_dir, max_num_lines=2, n=3)
+
+
+
    
         

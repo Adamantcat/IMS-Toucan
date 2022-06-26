@@ -1,5 +1,7 @@
 import os
 
+from torch import norm
+
 
 def build_path_to_transcript_dict_mls_italian():
     lang = "italian"
@@ -521,17 +523,27 @@ def build_path_to_transcript_dict_VIVOS_viet():
     return path_to_transcript_dict
 
 
-def build_path_to_transcript_dict_toni():
-    root = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_Zeilenweise"
+def build_path_to_transcript_dict_toni_wunderhorn():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_2/Train"
     path_to_transcript = dict()
+    # with open("/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data/exclude/exclude.txt", "r") as exclude:
+    #    exclude_list = exclude.read().split('\n')
     for el in os.listdir(root):
         if os.path.isdir(os.path.join(root, el)):
             with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
                 lookup = file.read()
             for line in lookup.split("\n"):
                 if line.strip() != "":
-                    norm_transcript = line.split("\t")[1]
-                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")
+                    if line.strip().startswith('#'):
+                        continue
+                    norm_transcript = line.split("\t")[1].rstrip().lstrip()
+                    wav_path = os.path.join(root, el, line.split("\t")[0])
+                    # if os.path.join(el, line.split("\t")[0]) in exclude_list:
+                    #    continue
                     if os.path.exists(wav_path):
                         path_to_transcript[wav_path] = norm_transcript
     return path_to_transcript
+
+if __name__ == '__main__':
+    path_to_transcript = build_path_to_transcript_dict_toni_wunderhorn()
+    print(path_to_transcript)
