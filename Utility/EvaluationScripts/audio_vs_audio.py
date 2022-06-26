@@ -202,11 +202,20 @@ def get_pitch_curves_abc(path_1, path_2, path_3, save_path=None):
     norm_wave_2 = ap_2.audio_to_wave_tensor(wave_2, normalize=True)
     norm_wave_3 = ap_3.audio_to_wave_tensor(wave_3, normalize=True)
 
+    speech_1 = ap_1.audio_to_mel_spec_tensor(audio=norm_wave_1, normalize=False, explicit_sampling_rate=16000).transpose(0, 1).cpu().numpy()
+    feats_len_1 = torch.LongTensor([len(speech_1)]).numpy()
+    speech_2 = ap_2.audio_to_mel_spec_tensor(audio=norm_wave_2, normalize=False, explicit_sampling_rate=16000).transpose(0, 1).cpu().numpy()
+    feats_len_2 = torch.LongTensor([len(speech_2)]).numpy()
+    speech_3 = ap_3.audio_to_mel_spec_tensor(audio=norm_wave_3, normalize=False, explicit_sampling_rate=16000).transpose(0, 1).cpu().numpy()
+    feats_len_3= torch.LongTensor([len(speech_3)]).numpy()
+
+
+
     parsel = Parselmouth(fs=16000, use_token_averaged_f0=False, use_log_f0=False, use_continuous_f0=False, n_fft=1024, hop_length=256)
 
-    pitch_curve_1 = parsel(norm_wave_1.unsqueeze(0), norm_by_average=False)[0].squeeze()
-    pitch_curve_2 = parsel(norm_wave_2.unsqueeze(0), norm_by_average=False)[0].squeeze()
-    pitch_curve_3 = parsel(norm_wave_3.unsqueeze(0), norm_by_average=False)[0].squeeze()
+    pitch_curve_1 = parsel(norm_wave_1.unsqueeze(0), norm_by_average=False, feats_lengths=feats_len_1)[0].squeeze()
+    pitch_curve_2 = parsel(norm_wave_2.unsqueeze(0), norm_by_average=False, feats_lengths=feats_len_2)[0].squeeze()
+    pitch_curve_3 = parsel(norm_wave_3.unsqueeze(0), norm_by_average=False, feats_lengths=feats_len_3)[0].squeeze()
 
     fig, ax = plt.subplots(nrows=3, ncols=1)
     lbd.specshow(ap_1.audio_to_mel_spec_tensor(wave_1).numpy(),
