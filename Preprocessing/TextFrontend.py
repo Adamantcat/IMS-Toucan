@@ -20,7 +20,8 @@ class ArticulatoryCombinedTextFrontend:
                  use_lexical_stress=True,
                  silent=True,
                  allow_unknown=False,
-                 add_silence_to_end=True):
+                 add_silence_to_end=True,
+                 use_word_boundaries=True):
         """
         Mostly preparing ID lookups
         """
@@ -28,6 +29,7 @@ class ArticulatoryCombinedTextFrontend:
         self.use_explicit_eos = use_explicit_eos
         self.use_stress = use_lexical_stress
         self.add_silence_to_end = add_silence_to_end
+        self.use_word_boundaries = use_word_boundaries
 
         if language == "en":
             self.g2p_lang = "en-us"
@@ -288,6 +290,8 @@ class ArticulatoryCombinedTextFrontend:
             ('\u030F', "˩"),
             # symbols that indicate a pause or silence
             ('"', "~"),
+            ('»', "~"),
+            ('«', "~"),
             ("-", "~"),
             ("-", "~"),
             ("…", "."),
@@ -331,6 +335,8 @@ class ArticulatoryCombinedTextFrontend:
 
         if for_plot_labels:
             phones = phones.replace(" ", "|")
+        if not self.use_word_boundaries:
+            phones = phones.replace(" ", "").replace("|", "")
 
         phones = "~" + phones
         phones = re.sub("~+", "~", phones)
