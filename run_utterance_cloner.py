@@ -162,10 +162,13 @@ class UtteranceCloner:
 
 
 if __name__ == '__main__':
-    uc = UtteranceCloner(model_id="Meta", device="cuda" if torch.cuda.is_available() else "cpu")
+    tf = ArticulatoryCombinedTextFrontend(language='en')
+    print(tf.get_phone_string('electric igniter'))
+    # uc = UtteranceCloner(model_id="Meta", device="cuda" if torch.cuda.is_available() else "cpu")
 
-    uc.clone_utterance(path_to_reference_audio="audios/test.wav",
-                       reference_transcription="Hello world, this is a test.",
-                       filename_of_result="audios/test_cloned.wav",
-                       clone_speaker_identity=False,
-                       lang="en")
+
+    # uc.clone_utterance(path_to_reference_audio="/Users/kockja/Documents/textklang/Creta_2022/Stavenhagen_Stündlein/Ein_Stündlein_s03_v04_original.wav",
+    #                    reference_transcription="Ach, Lieb und Treu ist wie ein Traum",
+    #                    filename_of_result="/Users/kockja/Documents/textklang/Creta_2022/Stavenhagen_Stündlein/test.wav",
+    #                    clone_speaker_identity=True,
+    #                    lang="de")
