@@ -1,20 +1,26 @@
 from certifi import where
 from Preprocessing.TextFrontend import ArticulatoryCombinedTextFrontend
-from Utility.EvaluationScripts.audio_vs_audio import get_pitch_curve_diff_extractors
+from Utility.EvaluationScripts.audio_vs_audio import get_pitch_curves_abc
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
+import sys
 
-tf = ArticulatoryCombinedTextFrontend(language='en')
-path = "/Users/kockja/Documents/PhD/adept/human/2.wav"
-transcript = "Don't forget to shut the door behind you?"
+tf = ArticulatoryCombinedTextFrontend(language='de')
+path_1 = "/Users/kockja/Documents/textklang/ICPhS/synthese_v3.2/Haelfte_des_Lebens_s02_stehn_0.wav"
+path_2 = "/Users/kockja/Documents/textklang/ICPhS/synthese_v3.2/Haelfte_des_Lebens_s02_stehn_1.wav"
+path_3 = "/Users/kockja/Documents/textklang/ICPhS/synthese_v3.2/Haelfte_des_Lebens_s02_stehn_2.wav"
+
+transcript = "Die Mauern stehn sprachlos und kalt, im Winde "
+
 text = tf.string_to_tensor(transcript, handle_missing=False).squeeze(0)
 
 # get_pitch_curves(path_1, path_2, plot_curves=True)
-# get_pitch_curves_abc(path_1, path_2, path_3)
+get_pitch_curves_abc(path_1, path_2, path_3)
 # get_pitch_curve_diff_extractors(path, text)
 
+sys.exit(0)
 results = dict()
 i = 0
 with open("/Users/kockja/Documents/PhD/Voiceprivacy/offsets_ICASSP/offsets_results_pitch_corr.txt", "r") as f:

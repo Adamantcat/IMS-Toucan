@@ -135,7 +135,8 @@ class InferenceFastSpeech2(torch.nn.Module):
                      silent=False,
                      dur_list=None,
                      pitch_list=None,
-                     energy_list=None):
+                     energy_list=None,
+                     input_is_phones=False):
         """
         Args:
             silent: Whether to be verbose about the process
@@ -179,7 +180,8 @@ class InferenceFastSpeech2(torch.nn.Module):
                                energy=energy,
                                duration_scaling_factor=duration_scaling_factor,
                                pitch_variance_scale=pitch_variance_scale,
-                               energy_variance_scale=energy_variance_scale).cpu()
+                               energy_variance_scale=energy_variance_scale,
+                               input_is_phones=input_is_phones).cpu()
                     wav = torch.cat((wav, silence), 0)
                 else:
                     wav = torch.cat((wav, self(text,
@@ -188,7 +190,8 @@ class InferenceFastSpeech2(torch.nn.Module):
                                                energy=energy.to(self.device),
                                                duration_scaling_factor=duration_scaling_factor,
                                                pitch_variance_scale=pitch_variance_scale,
-                                               energy_variance_scale=energy_variance_scale).cpu()), 0)
+                                               energy_variance_scale=energy_variance_scale,
+                                               input_is_phones=input_is_phones).cpu()), 0)
                     wav = torch.cat((wav, silence), 0)
         soundfile.write(file=file_location, data=wav.cpu().numpy(), samplerate=48000)
 

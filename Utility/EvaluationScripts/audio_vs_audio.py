@@ -205,11 +205,11 @@ def get_pitch_curves_abc(path_1, path_2, path_3):
     norm_wave_2 = ap_2.audio_to_wave_tensor(wave_2, normalize=True)
     norm_wave_3 = ap_3.audio_to_wave_tensor(wave_3, normalize=True)
 
-    dio = Dio(fs=16000, use_token_averaged_f0=False, use_log_f0=False, use_continuous_f0=False, n_fft=1024, hop_length=256)
+    parsel = Parselmouth(fs=16000, use_token_averaged_f0=False, use_log_f0=False, use_continuous_f0=False, n_fft=1024, hop_length=256)
 
-    pitch_curve_1 = dio(norm_wave_1.unsqueeze(0), norm_by_average=False)[0].squeeze()
-    pitch_curve_2 = dio(norm_wave_2.unsqueeze(0), norm_by_average=False)[0].squeeze()
-    pitch_curve_3 = dio(norm_wave_3.unsqueeze(0), norm_by_average=False)[0].squeeze()
+    pitch_curve_1 = parsel(norm_wave_1.unsqueeze(0), norm_by_average=False)[0].squeeze()
+    pitch_curve_2 = parsel(norm_wave_2.unsqueeze(0), norm_by_average=False)[0].squeeze()
+    pitch_curve_3 = parsel(norm_wave_3.unsqueeze(0), norm_by_average=False)[0].squeeze()
 
     fig, ax = plt.subplots(nrows=3, ncols=1)
     lbd.specshow(ap_1.audio_to_mel_spec_tensor(wave_1).numpy(),
