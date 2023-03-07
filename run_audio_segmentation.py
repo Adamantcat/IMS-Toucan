@@ -36,10 +36,10 @@ def cut_audio(filename, timepoints, out_dir):
 
 
 if __name__ == '__main__':
-    timedict = read("/mount/arbeitsdaten/textklang/data/timestamps_Strophe.txt")
+    timedict = read("/mount/arbeitsdaten/textklang/data/timestamps_Vers_Titel.txt")
     print(timedict)
     root = "/projekte/textklang/Audio-Pipeline/Data"
-    out_dir = "/mount/arbeitsdaten/textklang/synthesis/styles/stanzas"
+    out_dir = "/mount/arbeitsdaten/textklang/synthesis/styles/verses"
     for f, timepoints in timedict.items():
         print(f, " ", timepoints)
         cut_audio(f"{root}/{f}.wav", timepoints, out_dir)

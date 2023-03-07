@@ -19,11 +19,15 @@ def get_adjacency_matrix(features_df):
     adj_matrix = kneighbors_graph(features, n_neighbors=10).toarray()
     return adj_matrix
 
-def cluster(features_df, k=10):
+def cluster(features_df, k=10, save_file_path=None):
     adj_matrix = get_adjacency_matrix(features_df)
     labels = spectral_clustering(adj_matrix, n_clusters=k, assign_labels="cluster_qr")
     print(labels)
     labels_df = features_df.assign(label=labels)
+
+    if save_file_path is not None:
+        labels_df.to_csv(save_file_path, sep=";", columns=['name', 'label'])
+
     return labels_df
 
 def reduce(data):
@@ -107,7 +111,7 @@ def find_best_k(adj_matrix):
 
 
 if __name__ == '__main__':
-    features = read_features("/mount/arbeitsdaten/textklang/synthesis/features.is10.para.csv")
+    features = read_features("/mount/arbeitsdaten/textklang/synthesis/styles/Clustering/features.is09_emotion.csv")
     print(features.head)
     print(features.size)
     print(features.columns)
@@ -115,6 +119,6 @@ if __name__ == '__main__':
     # print(adjacency_matrix)
     # k = find_best_k(adjacency_matrix)
     # print(k)
-    labels = cluster(features, k=5)
+    labels = cluster(features, k=5, save_file_path="/mount/arbeitsdaten/textklang/synthesis/styles/Clustering/labels.is09_emo.csv")
     print(labels)
-    plot(labels, title="PARA Verses PCA", save_file_path="/mount/arbeitsdaten/dialog-1/kochja/projects/IMS-Toucan/vis/is10_para_pca.png", legend=True, colors=None, plot_tsne=False)
+    plot(labels, title="EMO Verses PCA", save_file_path="vis/is09_emo_pca.png", legend=True, colors=None, plot_tsne=False)

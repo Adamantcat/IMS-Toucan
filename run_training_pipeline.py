@@ -1,15 +1,16 @@
 import argparse
 import sys
 
-from TrainingInterfaces.Spectrogram_to_Embedding.finetune_embeddings_to_tasks import finetune_model_emotion
-from TrainingInterfaces.Spectrogram_to_Embedding.finetune_embeddings_to_tasks import finetune_model_speaker
-from TrainingInterfaces.TrainingPipelines.FastSpeech2_Controllable import run as control
-from TrainingInterfaces.TrainingPipelines.FastSpeech2_Embedding import run as gst
-from TrainingInterfaces.TrainingPipelines.FastSpeech2_IntegrationTest import run as integration_test
+# from TrainingInterfaces.Spectrogram_to_Embedding.finetune_embeddings_to_tasks import finetune_model_emotion
+# from TrainingInterfaces.Spectrogram_to_Embedding.finetune_embeddings_to_tasks import finetune_model_speaker
+# from TrainingInterfaces.TrainingPipelines.FastSpeech2_Controllable import run as control
+# from TrainingInterfaces.TrainingPipelines.FastSpeech2_Embedding import run as gst
+# from TrainingInterfaces.TrainingPipelines.FastSpeech2_IntegrationTest import run as integration_test
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_MetaCheckpoint import run as meta_fast
-from TrainingInterfaces.TrainingPipelines.FastSpeech2_finetuning_example import run as fine_ger
+from TrainingInterfaces.TrainingPipelines.FastSpeech2_German_Prose import run as fine_ger
+from TrainingInterfaces.TrainingPipelines.FastSpeech2_German_Prose import run as ger_prose
 from TrainingInterfaces.TrainingPipelines.HiFiGAN_Avocodo import run as hifigan_combined
-from TrainingInterfaces.TrainingPipelines.HiFiGAN_Avocodo_low_RAM import run as hifigan_combined_low_ram
+# from TrainingInterfaces.TrainingPipelines.HiFiGAN_Avocodo_low_RAM import run as hifigan_combined_low_ram
 from TrainingInterfaces.TrainingPipelines.pretrain_aligner import run as aligner
 
 pipeline_dict = {
@@ -17,12 +18,13 @@ pipeline_dict = {
     "hificodo":         hifigan_combined,
     "aligner":          aligner,
     "fine_ger":         fine_ger,
-    "integration_test": integration_test,
-    "gst":              gst,
-    "spk":              finetune_model_speaker,
-    "emo":              finetune_model_emotion,
-    "control":          control,
-    "low_ram_avocodo":  hifigan_combined_low_ram,
+    "ger_prose":        ger_prose
+   # "integration_test": integration_test,
+   # "gst":              gst,
+   # "spk":              finetune_model_speaker,
+   # "emo":              finetune_model_emotion,
+   # "control":          control,
+   # "low_ram_avocodo":  hifigan_combined_low_ram,
 }
 
 if __name__ == '__main__':
