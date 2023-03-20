@@ -49,21 +49,7 @@ def train_loop(net,
                postnet_start_steps
                ):
     """
-    Args:
-        resume: whether to resume from the most recent checkpoint
-        warmup_steps: how long the learning rate should increase before it reaches the specified value
-        lr: The initial learning rate for the optimiser
-        path_to_checkpoint: reloads a checkpoint to continue training from there
-        fine_tune: whether to load everything from a checkpoint, or only the model parameters
-        lang: language of the synthesis
-        net: Model to train
-        train_dataset: Pytorch Dataset Object for train data
-        device: Device to put the loaded tensors on
-        save_directory: Where to save the checkpoints
-        batch_size: How many elements should be loaded at once
-        phase_1_steps: how many steps to train before using any of the cycle objectives
-        phase_2_steps: how many steps to train using the cycle objectives
-        path_to_embed_model: path to the pretrained embedding function
+    see train loop arbiter for explanations of the arguments
     """
     steps = phase_1_steps + phase_2_steps
     net = net.to(device)
@@ -85,7 +71,7 @@ def train_loop(net,
                               collate_fn=collate_and_pad,
                               persistent_workers=True)
     step_counter = 0
-    optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(net.parameters(), lr=lr, betas=(0.9, 0.98))
     scheduler = WarmupScheduler(optimizer, peak_lr=lr, warmup_steps=warmup_steps,
                                 max_steps=phase_1_steps + phase_2_steps)
     grad_scaler = GradScaler()
@@ -108,10 +94,11 @@ def train_loop(net,
         train_losses_this_epoch = list()
         cycle_losses_this_epoch = list()
         l1_losses_total = list()
+        glow_losses_total = list()
         duration_losses_total = list()
         pitch_losses_total = list()
         energy_losses_total = list()
-        glow_losses_total = list()
+
         for batch in tqdm(train_loader):
             train_loss = 0.0
             with autocast():
@@ -122,16 +109,14 @@ def train_loop(net,
                     style_embedding = style_embedding_function(batch_of_spectrograms=batch[2].to(device),
                                                                batch_of_spectrogram_lengths=batch[3].to(device))
 
-                    l1_loss, duration_loss, pitch_loss, energy_loss, glow_loss, kl_loss = net(
+                    l1_loss, duration_loss, pitch_loss, energy_loss, glow_loss = net(
                         text_tensors=batch[0].to(device),
                         text_lengths=batch[1].to(device),
                         gold_speech=batch[2].to(device),
                         speech_lengths=batch[3].to(device),
                         gold_durations=batch[4].to(device),
-                        gold_pitch=batch[6].to(device),
-                        # mind the switched order
-                        gold_energy=batch[5].to(device),
-                        # mind the switched order
+                        gold_pitch=batch[6].to(device),  # mind the switched order
+                        gold_energy=batch[5].to(device),  # mind the switched order
                         utterance_embedding=style_embedding,
                         lang_ids=batch[8].to(device),
                         return_mels=False,
@@ -156,16 +141,14 @@ def train_loop(net,
                         batch_of_spectrogram_lengths=batch[3].to(device),
                         return_all_outs=True)
 
-                    l1_loss, duration_loss, pitch_loss, energy_loss, glow_loss, kl_loss, output_spectrograms = net(
+                    l1_loss, duration_loss, pitch_loss, energy_loss, glow_loss, output_spectrograms = net(
                         text_tensors=batch[0].to(device),
                         text_lengths=batch[1].to(device),
                         gold_speech=batch[2].to(device),
                         speech_lengths=batch[3].to(device),
                         gold_durations=batch[4].to(device),
-                        gold_pitch=batch[6].to(device),
-                        # mind the switched order
-                        gold_energy=batch[5].to(device),
-                        # mind the switched order
+                        gold_pitch=batch[6].to(device),  # mind the switched order
+                        gold_energy=batch[5].to(device),  # mind the switched order
                         utterance_embedding=style_embedding_of_gold.detach(),
                         lang_ids=batch[8].to(device),
                         return_mels=True,
@@ -186,10 +169,8 @@ def train_loop(net,
                         batch_of_spectrogram_lengths=batch[3].to(device),
                         return_all_outs=True)
 
-                    cycle_dist = torch.nn.functional.l1_loss(style_embedding_of_predicted,
-                                                             style_embedding_of_gold.detach()) * 0.1 + \
-                                 1.0 - torch.nn.functional.cosine_similarity(style_embedding_of_predicted,
-                                                                             style_embedding_of_gold.detach()).mean()
+                    cycle_dist = torch.nn.functional.l1_loss(style_embedding_of_predicted, style_embedding_of_gold.detach()) * 0.1 + \
+                                 1.0 - torch.nn.functional.cosine_similarity(style_embedding_of_predicted, style_embedding_of_gold.detach()).mean()
 
                     cycle_losses_this_epoch.append(cycle_dist.item())
                     train_loss = train_loss + cycle_dist
@@ -228,27 +209,6 @@ def train_loop(net,
             "default_emb" : default_embedding,
         }, os.path.join(save_directory, "checkpoint_{}.pt".format(step_counter)))
         delete_old_checkpoints(save_directory, keep=5)
-        try:
-            path_to_most_recent_plot_before, \
-            path_to_most_recent_plot_after = plot_progress_spec(net,
-                                                                device,
-                                                                save_dir=save_directory,
-                                                                step=step_counter,
-                                                                lang=lang,
-                                                                default_emb=default_embedding,
-                                                                before_and_after_postnet=True,
-                                                                run_postflow=step_counter - 5 > postnet_start_steps)
-            if use_wandb:
-                wandb.log({
-                    "progress_plot_before": wandb.Image(path_to_most_recent_plot_before)
-                })
-                if step_counter > postnet_start_steps:
-                    wandb.log({
-                        "progress_plot_after": wandb.Image(path_to_most_recent_plot_after)
-                    })
-
-        except IndexError:
-            print("generating progress plots failed.")
 
         print("Epoch:              {}".format(epoch))
         print("Total Loss:         {}".format(sum(train_losses_this_epoch) / len(train_losses_this_epoch)))
@@ -267,6 +227,29 @@ def train_loop(net,
                 "cycle_loss"   : sum(cycle_losses_this_epoch) / len(cycle_losses_this_epoch) if len(cycle_losses_this_epoch) != 0 else None,
                 "Steps"        : step_counter,
             })
+
+        try:
+            path_to_most_recent_plot_before, \
+                path_to_most_recent_plot_after = plot_progress_spec(net,
+                                                                    device,
+                                                                    save_dir=save_directory,
+                                                                    step=step_counter,
+                                                                    lang=lang,
+                                                                    default_emb=default_embedding,
+                                                                    before_and_after_postnet=True,
+                                                                    run_postflow=step_counter - 5 > postnet_start_steps)
+            if use_wandb:
+                wandb.log({
+                    "progress_plot_before": wandb.Image(path_to_most_recent_plot_before)
+                })
+                if step_counter > postnet_start_steps:
+                    wandb.log({
+                        "progress_plot_after": wandb.Image(path_to_most_recent_plot_after)
+                    })
+
+        except IndexError:
+            print("generating progress plots failed.")
+
         if step_counter > steps:
             # DONE
             return

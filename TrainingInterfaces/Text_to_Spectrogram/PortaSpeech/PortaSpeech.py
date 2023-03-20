@@ -40,7 +40,7 @@ class PortaSpeech(torch.nn.Module, ABC):
                  # network structure related
                  input_feature_dimensions=62,
                  output_spectrogram_channels=80,
-                 attention_dimension=192,  # TODO try 192, 384, 512
+                 attention_dimension=192,
                  attention_heads=4,
                  positionwise_conv_kernel_size=1,
                  use_scaled_positional_encoding=True,
@@ -92,6 +92,7 @@ class PortaSpeech(torch.nn.Module, ABC):
                  use_weighted_masking=True,
                  # additional features
                  utt_embed_dim=64,
+                 detach_postflow=False,
                  lang_embs=8000):
         super().__init__()
 
@@ -100,6 +101,7 @@ class PortaSpeech(torch.nn.Module, ABC):
         self.odim = output_spectrogram_channels
         self.adim = attention_dimension
         self.eos = 1
+        self.detach_postflow = detach_postflow
         self.stop_gradient_from_pitch_predictor = stop_gradient_from_pitch_predictor
         self.stop_gradient_from_energy_predictor = stop_gradient_from_energy_predictor
         self.use_scaled_pos_enc = use_scaled_positional_encoding
@@ -380,6 +382,8 @@ class PortaSpeech(torch.nn.Module, ABC):
 
         decoded_speech, _ = self.decoder(encoded_texts, decoder_masks, utterance_embedding)
         predicted_spectrogram_before_postnet = self.feat_out(decoded_speech).view(decoded_speech.size(0), -1, self.odim)
+        if self.detach_postflow:
+            predicted_spectrogram_before_postnet = predicted_spectrogram_before_postnet.detach()
 
         predicted_spectrogram_after_postnet = None
 

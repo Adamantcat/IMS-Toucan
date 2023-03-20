@@ -3,7 +3,7 @@ import time
 import torch
 import wandb
 
-from TrainingInterfaces.Spectrogram_to_Wave.HiFiGAN.HiFiGAN import HiFiGANGenerator
+from TrainingInterfaces.Spectrogram_to_Wave.BigVGAN.BigVGAN import BigVGAN
 from TrainingInterfaces.Spectrogram_to_Wave.HiFiGAN.HiFiGANDataset import HiFiGANDataset
 from TrainingInterfaces.Spectrogram_to_Wave.HiFiGAN.HiFiGAN_Discriminators import AvocodoHiFiGANJointDiscriminator
 from TrainingInterfaces.Spectrogram_to_Wave.HiFiGAN.hifigan_train_loop import train_loop
@@ -29,7 +29,7 @@ def run(gpu_id, resume_checkpoint, finetune, resume, model_dir, use_wandb, wandb
     if model_dir is not None:
         model_save_dir = model_dir
     else:
-        model_save_dir = os.path.join(MODELS_DIR, "Avocodo")
+        model_save_dir = os.path.join(MODELS_DIR, "BigVGAN")
     os.makedirs(model_save_dir, exist_ok=True)
 
     print("Preparing new data...")
@@ -71,11 +71,12 @@ def run(gpu_id, resume_checkpoint, finetune, resume, model_dir, use_wandb, wandb
     file_lists_for_this_run_combined += list(build_path_to_transcript_dict_ESDS().keys())
     file_lists_for_this_run_combined += list(build_file_list_singing_voice_audio_database())
 
-    train_set = HiFiGANDataset(list_of_paths=random.sample(file_lists_for_this_run_combined, 200000),  # adjust the sample size until it fits into RAM
-                               use_random_corruption=False)
+    train_set = HiFiGANDataset(list_of_paths=random.sample(file_lists_for_this_run_combined, 200000) +
+                                             list(build_path_to_transcript_dict_blizzard2023_ad().keys()) +
+                                             list(build_path_to_transcript_dict_blizzard2023_neb().keys()),  # adjust the sample size until it fits into RAM
+                               )
 
-    generator = HiFiGANGenerator()
-    generator.reset_parameters()
+    generator = BigVGAN()
     jit_compiled_generator = torch.jit.trace(generator, torch.rand([24, 80, 32]))
     discriminator = AvocodoHiFiGANJointDiscriminator()
 

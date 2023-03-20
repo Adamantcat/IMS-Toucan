@@ -149,11 +149,6 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
                                                     corpus_dir=os.path.join(PREPROCESSING_DIR, "mls_dutch"),
                                                     lang="nl"))
 
-    french_datasets.append(
-        prepare_fastspeech_corpus(transcript_dict=build_path_to_transcript_dict_synpaflex_all(),
-                                  corpus_dir=os.path.join(PREPROCESSING_DIR, "synpaflex_all"),
-                                  lang="fr"))
-
     french_datasets.append(prepare_fastspeech_corpus(transcript_dict=build_path_to_transcript_dict_siwis_subset(),
                                                      corpus_dir=os.path.join(PREPROCESSING_DIR, "siwis"),
                                                      lang="fr"))
@@ -164,6 +159,10 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
 
     french_datasets.append(prepare_fastspeech_corpus(transcript_dict=build_path_to_transcript_dict_blizzard2023_neb(),
                                                      corpus_dir=os.path.join(PREPROCESSING_DIR, "blizzard2023neb"),
+                                                     lang="fr"))
+
+    french_datasets.append(prepare_fastspeech_corpus(transcript_dict=build_path_to_transcript_dict_mls_french(),
+                                                     corpus_dir=os.path.join(PREPROCESSING_DIR, "mls_french"),
                                                      lang="fr"))
 
     portuguese_datasets.append(prepare_fastspeech_corpus(transcript_dict=build_path_to_transcript_dict_mls_portuguese(),

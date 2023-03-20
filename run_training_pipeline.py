@@ -1,11 +1,17 @@
 import argparse
 import sys
 
+from TrainingInterfaces.TrainingPipelines.BigVGAN_combined import run as bigvgan
 from TrainingInterfaces.TrainingPipelines.FastSpeech2_IntegrationTest import run as fs_integration_test
 from TrainingInterfaces.TrainingPipelines.HiFiGAN_Avocodo import run as hifi_codo
 from TrainingInterfaces.TrainingPipelines.JointEmbeddingFunction import run as embedding
+from TrainingInterfaces.TrainingPipelines.PortaSpeech_AD import run as ad
+from TrainingInterfaces.TrainingPipelines.PortaSpeech_French import run as french
 from TrainingInterfaces.TrainingPipelines.PortaSpeech_IntegrationTest import run as ps_integration_test
 from TrainingInterfaces.TrainingPipelines.PortaSpeech_MetaCheckpoint import run as meta
+from TrainingInterfaces.TrainingPipelines.PortaSpeech_NEB import run as neb
+from TrainingInterfaces.TrainingPipelines.ToucanTTS_Libri import run as libri
+from TrainingInterfaces.TrainingPipelines.ToucanTTS_Nancy import run as nancy
 from TrainingInterfaces.TrainingPipelines.finetuning_example import run as fine_tuning_example
 from TrainingInterfaces.TrainingPipelines.pretrain_aligner import run as aligner
 
@@ -17,6 +23,12 @@ pipeline_dict = {
     "fine_ex"  : fine_tuning_example,
     "fs_it"    : fs_integration_test,
     "ps_it"    : ps_integration_test,
+    "nancy"    : nancy,
+    "ad"       : ad,
+    "neb"      : neb,
+    "french"   : french,
+    "libri"    : libri,
+    "bigvgan"  : bigvgan
 }
 
 if __name__ == '__main__':
