@@ -1,17 +1,28 @@
 # -*- coding: utf-8 -*-
 
-
 import re
 import sys
+import os
+import json
 
 import torch
 from dragonmapper.transcriptions import pinyin_to_ipa
 from phonemizer.backend import EspeakBackend
 from pypinyin import pinyin
 
+from Utility.storage_config import PREPROCESSING_DIR
 from Preprocessing.articulatory_features import generate_feature_table
 from Preprocessing.articulatory_features import get_feature_to_index_lookup
 from Preprocessing.articulatory_features import get_phone_to_id
+from pathlib import Path
+from flair.data import Sentence
+from flair.models import SequenceTagger
+import flair
+
+# from articulatory_features import generate_feature_table
+# from articulatory_features import get_feature_to_index_lookup
+# from articulatory_features import get_phone_to_id
+
 
 
 class ArticulatoryCombinedTextFrontend:
@@ -107,6 +118,11 @@ class ArticulatoryCombinedTextFrontend:
         elif language == "fr":
             self.g2p_lang = "fr-fr"
             self.expand_abbreviations = lambda x: x
+            # add POS Tagger for Blizzard Challenge
+            flair.cache_root = Path(f"{PREPROCESSING_DIR}/.flair")
+            self.pos_tagger = SequenceTagger.load("qanastek/pos-french")
+            self.homographs = load_json_from_path("Preprocessing/french_homographs_with_meta.json")
+            self.homograph_list = list(self.homographs.keys())
             if not silent:
                 print("Created a French Text-Frontend")
 
@@ -292,6 +308,18 @@ class ArticulatoryCombinedTextFrontend:
         # phonemize
         if self.g2p_lang == "cmn-latn-pinyin" or self.g2p_lang == "cmn":
             phones = pinyin_to_ipa(utt)
+        elif self.g2p_lang == "fr-fr":
+            sentence = Sentence(text)
+            self.pos_tagger.predict(sentence)
+            for label in sentence.get_labels():
+                token = label.data_point.text
+                pos = label.value
+                if token in self.homograph_list:
+                    print("found homograph: ", token, "\t POS: ", pos)
+                    
+            #print(sentence.to_tagged_string())
+
+            phones = self.phonemizer_backend.phonemize([utt], strip=True)[0]
         else:
             phones = self.phonemizer_backend.phonemize([utt], strip=True)[0]  # To use a different phonemizer, this is the only line that needs to be exchanged
 
@@ -491,19 +519,34 @@ def get_language_id(language):
     elif language == "pt-br":
         return torch.LongTensor([17])
 
+def load_json_from_path(path):
+    with open(path, "r", encoding="utf8") as f:
+        obj = json.loads(f.read())
+    return obj
 
 if __name__ == '__main__':
-    tf = ArticulatoryCombinedTextFrontend(language="en")
-    tf.string_to_tensor("This is a complex sentence, it even has a pause! But can it do this? Nice.", view=True)
 
-    tf = ArticulatoryCombinedTextFrontend(language="de")
-    tf.string_to_tensor("Alles klar, jetzt testen wir einen deutschen Satz. Ich hoffe es gibt nicht mehr viele unspezifizierte Phoneme.", view=True)
+    tf = ArticulatoryCombinedTextFrontend(language="fr")
+    pos_tagger = SequenceTagger.load("qanastek/pos-french")
+    sentence = Sentence("George Washington est allé à Washington.")
+    # Predict tags
+    pos_tagger.predict(sentence)
+    # Print predicted pos tags
+    print(sentence.to_tagged_string())
 
-    tf = ArticulatoryCombinedTextFrontend(language="cmn")
-    tf.string_to_tensor("这是一个复杂的句子，它甚至包含一个停顿。", view=True)
-    tf.string_to_tensor("李绅 《悯农》 锄禾日当午， 汗滴禾下土。 谁知盘中餐， 粒粒皆辛苦。", view=True)
-    tf.string_to_tensor("巴 拔 把 爸 吧", view=True)
+    tf.string_to_tensor("George Washington est allé à Washington.", view=True)
 
-    tf = ArticulatoryCombinedTextFrontend(language="vi")
-    tf.string_to_tensor("Xin chào thế giới, quả là một ngày tốt lành để học nói tiếng Việt!", view=True)
-    tf.string_to_tensor("ba bà bá bạ bả bã", view=True)
+    # tf = ArticulatoryCombinedTextFrontend(language="en")
+    # tf.string_to_tensor("This is a complex sentence, it even has a pause! But can it do this? Nice.", view=True)
+
+    # tf = ArticulatoryCombinedTextFrontend(language="de")
+    # tf.string_to_tensor("Alles klar, jetzt testen wir einen deutschen Satz. Ich hoffe es gibt nicht mehr viele unspezifizierte Phoneme.", view=True)
+
+    # tf = ArticulatoryCombinedTextFrontend(language="cmn")
+    # tf.string_to_tensor("这是一个复杂的句子，它甚至包含一个停顿。", view=True)
+    # tf.string_to_tensor("李绅 《悯农》 锄禾日当午， 汗滴禾下土。 谁知盘中餐， 粒粒皆辛苦。", view=True)
+    # tf.string_to_tensor("巴 拔 把 爸 吧", view=True)
+
+    # tf = ArticulatoryCombinedTextFrontend(language="vi")
+    # tf.string_to_tensor("Xin chào thế giới, quả là một ngày tốt lành để học nói tiếng Việt!", view=True)
+    # tf.string_to_tensor("ba bà bá bạ bả bã", view=True)
