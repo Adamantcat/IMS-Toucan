@@ -44,6 +44,7 @@ def train_loop(generator,
 
     g = generator.to(device)
     d = discriminator.to(device)
+
     g.train()
     d.train()
     optimizer_g = torch.optim.RAdam(g.parameters(), betas=(0.5, 0.9), lr=0.001, weight_decay=0.0)
@@ -54,8 +55,7 @@ def train_loop(generator,
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=batch_size,
                               shuffle=True,
-                              num_workers=batch_size // 4 if os.cpu_count() - 2 > batch_size // 4 else max(
-                                  os.cpu_count() - 2, 1),
+                              num_workers=batch_size // 4 if os.cpu_count() - 2 > batch_size // 4 else max(os.cpu_count() - 2, 1),
                               pin_memory=True,
                               drop_last=True,
                               prefetch_factor=6,
@@ -152,13 +152,13 @@ def train_loop(generator,
         if epoch % epochs_per_save == 0:
             g.eval()
             torch.save({
-                "generator":               g.state_dict(),
-                "discriminator":           d.state_dict(),
-                "generator_optimizer":     optimizer_g.state_dict(),
+                "generator"              : g.state_dict(),
+                "discriminator"          : d.state_dict(),
+                "generator_optimizer"    : optimizer_g.state_dict(),
                 "discriminator_optimizer": optimizer_d.state_dict(),
-                "generator_scheduler":     scheduler_g.state_dict(),
+                "generator_scheduler"    : scheduler_g.state_dict(),
                 "discriminator_scheduler": scheduler_d.state_dict(),
-                "step_counter":            step_counter
+                "step_counter"           : step_counter
             }, os.path.join(model_save_dir, "checkpoint_{}.pt".format(step_counter)))
             g.train()
             delete_old_checkpoints(model_save_dir, keep=5)

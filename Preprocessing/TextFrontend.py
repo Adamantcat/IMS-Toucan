@@ -44,7 +44,7 @@ class ArticulatoryCombinedTextFrontend:
             "˧": 3,
             "˨": 2,
             "˩": 1
-            }
+        }
         self.rising_perms = list()
         self.falling_perms = list()
         self.peaking_perms = list()
@@ -172,14 +172,13 @@ class ArticulatoryCombinedTextFrontend:
             if not silent:
                 print("Created a Farsi Text-Frontend")
 
-
         else:
             print("Language not supported yet")
             sys.exit()
 
         # remember to also update get_language_id() below when adding something here, as well as the get_example_sentence function
 
-        if self.g2p_lang != "cmn" or self.g2p_lang != "cmn-latn-pinyin":
+        if self.g2p_lang != "cmn" and self.g2p_lang != "cmn-latn-pinyin":
             self.phonemizer_backend = EspeakBackend(language=self.g2p_lang,
                                                     punctuation_marks=';:,.!?¡¿—…"«»“”~/。【】、‥،؟“”؛',
                                                     preserve_punctuation=True,
@@ -257,6 +256,9 @@ class ArticulatoryCombinedTextFrontend:
             elif char == '\u0306':
                 # shortened
                 phones_vector[-1][get_feature_to_index_lookup()["shortened"]] = 1
+            elif char == '̃':
+                # nasalized (vowel)
+                phones_vector[-1][get_feature_to_index_lookup()["nasal"]] = 1
             elif char == "˥":
                 # very high tone
                 phones_vector[-1][get_feature_to_index_lookup()["very-high-tone"]] = 1
@@ -303,6 +305,7 @@ class ArticulatoryCombinedTextFrontend:
     def get_phone_string(self, text, include_eos_symbol=True, for_feature_extraction=False, for_plot_labels=False, resolve_homographs=True):
         # expand abbreviations
         utt = self.expand_abbreviations(text)
+
 
         # phonemize
         if self.g2p_lang == "cmn-latn-pinyin" or self.g2p_lang == "cmn":
@@ -431,9 +434,11 @@ class ArticulatoryCombinedTextFrontend:
             (",", "~")  # make sure this remains the final one when adding new ones
         ]
         unsupported_ipa_characters = {'̹', '̙', '̞', '̯', '̤', '̪', '̩', '̠', '̟', 'ꜜ',
-                                      '̃', '̬', '̽', 'ʰ', '|', '̝', '•', 'ˠ', '↘',
+                                      '̬', '̽', 'ʰ', '|', '̝', '•', 'ˠ', '↘',
                                       '‖', '̰', '‿', 'ᷝ', '̈', 'ᷠ', '̜', 'ʷ', 'ʲ',
                                       '̚', '↗', 'ꜛ', '̻', '̥', 'ˁ', '̘', '͡', '̺'}
+        # TODO support more of these. Problem: bridge over to aligner ID lookups after modifying the feature vector
+        #  https://en.wikipedia.org/wiki/IPA_number
         for char in unsupported_ipa_characters:
             replacements.append((char, ""))
 
@@ -455,7 +460,8 @@ class ArticulatoryCombinedTextFrontend:
                 ('⭨', ""),  # falling
                 ('⮃', ""),  # dipping
                 ('⮁', ""),  # peaking
-                ]
+                ('̃', ""),  # nasalizing
+            ]
         for replacement in replacements:
             phoneme_string = phoneme_string.replace(replacement[0], replacement[1])
         phones = re.sub("~+", "~", phoneme_string)
@@ -490,6 +496,24 @@ class ArticulatoryCombinedTextFrontend:
 
         return phones
 
+    def text_vectors_to_id_sequence(self, text_vector):
+        tokens = list()
+        for vector in text_vector:
+            if vector[get_feature_to_index_lookup()["word-boundary"]] == 0:
+                # we don't include word boundaries when performing alignment, since they are not always present in audio.
+                features = vector.cpu().numpy().tolist()
+                if vector[get_feature_to_index_lookup()["vowel"]] == 1 and vector[get_feature_to_index_lookup()["nasal"]] == 1:
+                    # for the sake of alignment, we ignore the difference between nasalized vowels and regular vowels
+                    features[get_feature_to_index_lookup()["nasal"]] = 0
+                features = features[13:]
+                # the first 12 dimensions are for modifiers, so we ignore those when trying to find the phoneme in the ID lookup
+                for phone in self.phone_to_vector:
+                    if features == self.phone_to_vector[phone][13:]:
+                        tokens.append(self.phone_to_id[phone])
+                        # this is terribly inefficient, but it's fine
+                        break
+        return tokens
+
 
 def english_text_expansion(text):
     """
@@ -511,7 +535,6 @@ def french_spacing(text):
     for punc in ["!", ";", ":", ".", ",", "?"]:
         text = text.replace(f" {punc}", punc)
     return text
-
 
 
 def convert_kanji_to_pinyin_mandarin(text):
@@ -577,3 +600,8 @@ if __name__ == '__main__':
     tf = ArticulatoryCombinedTextFrontend(language="vi")
     tf.string_to_tensor("Xin chào thế giới, quả là một ngày tốt lành để học nói tiếng Việt!", view=True)
     tf.string_to_tensor("ba bà bá bạ bả bã", view=True)
+
+    tf = ArticulatoryCombinedTextFrontend(language="fr")
+    tf.string_to_tensor("Je ne te fais pas un dessin.", view=True)
+    print(tf.get_phone_string("Je ne te fais pas un dessin."))
+    print(tf.string_to_tensor("un", view=True))

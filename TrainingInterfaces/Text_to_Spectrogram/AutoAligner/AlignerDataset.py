@@ -13,7 +13,6 @@ from tqdm import tqdm
 
 from Preprocessing.AudioPreprocessor import AudioPreprocessor
 from Preprocessing.TextFrontend import ArticulatoryCombinedTextFrontend
-from Preprocessing.articulatory_features import get_feature_to_index_lookup
 from Utility.storage_config import MODELS_DIR
 
 
@@ -151,8 +150,7 @@ class AlignerDataset(Dataset):
                 continue
             try:
                 with warnings.catch_warnings():
-                    warnings.simplefilter(
-                        "ignore")  # otherwise we get tons of warnings about an RNN not being in contiguous chunks
+                    warnings.simplefilter("ignore")  # otherwise we get tons of warnings about an RNN not being in contiguous chunks
                     norm_wave = ap.audio_to_wave_tensor(normalize=True, audio=wave)
             except ValueError:
                 continue
@@ -193,16 +191,7 @@ class AlignerDataset(Dataset):
 
     def __getitem__(self, index):
         text_vector = self.datapoints[index][0]
-        tokens = list()
-        for vector in text_vector:
-            if vector[get_feature_to_index_lookup()["word-boundary"]] == 0:
-                # we don't include word boundaries when performing alignment, since they are not always present in audio.
-                for phone in self.tf.phone_to_vector:
-                    if vector.numpy().tolist()[13:] == self.tf.phone_to_vector[phone][13:]:
-                        # the first 12 dimensions are for modifiers, so we ignore those when trying to find the phoneme in the ID lookup
-                        tokens.append(self.tf.phone_to_id[phone])
-                        # this is terribly inefficient, but it's fine
-                        break
+        tokens = self.tf.text_vectors_to_id_sequence(text_vector=text_vector)
         tokens = torch.LongTensor(tokens)
         return tokens, \
                torch.LongTensor([len(tokens)]), \
