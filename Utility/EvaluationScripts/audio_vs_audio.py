@@ -248,7 +248,7 @@ def get_pitch_curves_abc(path_1, path_2, path_3, save_path=None):
                  x_axis=None,
                  hop_length=256)
     ax[2].yaxis.set_visible(False)
-    ax[2].set_title("Magic Horn Model")
+    ax[2].set_title("Poetry Model")
     ax[2].plot(pitch_curve_3, c="darkred")
 
     plt.tight_layout()
