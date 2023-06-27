@@ -66,6 +66,7 @@ if __name__ == '__main__':
 
     read_texts(model_id="Meta",
                sentence="Es blüht ein schönes Blümchen, Auf unsrer grünen Au. Sein Aug' ist wie der Himmel, So heiter und so blau.",
-               filename="audios/vergissmeinnicht_meta.wav",
+               filename="audios/test_zischler.wav",
                device=exec_device,
+               speaker_reference="/Users/kockja/Documents/PhD/PoetryStyles/test_data/Hoelderlin_Bloedigkeit_Zischler_m_P_2020/Hoelderlin_Bloedigkeit_Zischler_m_P_2020_14.wav",
                language="de")

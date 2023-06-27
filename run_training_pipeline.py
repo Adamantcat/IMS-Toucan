@@ -12,13 +12,15 @@ from TrainingInterfaces.TrainingPipelines.FastSpeech2_German_Prose import run as
 from TrainingInterfaces.TrainingPipelines.HiFiGAN_Avocodo import run as hifigan_combined
 # from TrainingInterfaces.TrainingPipelines.HiFiGAN_Avocodo_low_RAM import run as hifigan_combined_low_ram
 from TrainingInterfaces.TrainingPipelines.pretrain_aligner import run as aligner
+from TrainingInterfaces.TrainingPipelines.FastSpeech2_finetuning_LJSpeech import run as finetune_LJ
 
 pipeline_dict = {
     "meta":             meta_fast,
     "hificodo":         hifigan_combined,
     "aligner":          aligner,
     "fine_ger":         fine_ger,
-    "ger_prose":        ger_prose
+    "ger_prose":        ger_prose,
+    "finetune_LJ":      finetune_LJ
    # "integration_test": integration_test,
    # "gst":              gst,
    # "spk":              finetune_model_speaker,

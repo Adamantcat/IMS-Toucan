@@ -4,6 +4,7 @@ from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 import pandas as pd
 import numpy as np
+import json
 import matplotlib
 from matplotlib import cm
 from matplotlib import pyplot as plt
@@ -14,8 +15,20 @@ def read_features(filename):
     df = pd.read_csv(filename, sep=";")
     return df
 
-def get_adjacency_matrix(features_df):
-    features = features_df.to_numpy()[:,2:] # we don't want filename and frameTime for clustering
+def read_json(filename):
+    with open(filename, 'r') as file:
+        features = json.load(file)
+    return features
+
+
+def get_adjacency_matrix(features_dict):
+   # features = features_df.to_numpy()[:,2:] # we don't want filename and frameTime for clustering
+    features = []
+    for f in features_dict.keys():
+        features.append(features_dict[f]['features'])
+    features_df = pd.DataFrame.from_dict(features, orient='columns')
+
+    print(features_df.columns)
     adj_matrix = kneighbors_graph(features, n_neighbors=10).toarray()
     return adj_matrix
 
@@ -111,14 +124,17 @@ def find_best_k(adj_matrix):
 
 
 if __name__ == '__main__':
-    features = read_features("/mount/arbeitsdaten/textklang/synthesis/styles/Clustering/features.is09_emotion.csv")
-    print(features.head)
-    print(features.size)
-    print(features.columns)
+    #features = read_features("/mount/arbeitsdaten/textklang/synthesis/styles/Clustering/features.is09_emotion.csv")
+    features = read_json("poems_features_eGeMAPS_mfcc20.json")
+    # print(len(features.keys()))
+    # print(features.head)
+    # print(features.size)
+    # print(features.columns)
+
     adjacency_matrix = get_adjacency_matrix(features)
     # print(adjacency_matrix)
     # k = find_best_k(adjacency_matrix)
     # print(k)
-    labels = cluster(features, k=5, save_file_path="/mount/arbeitsdaten/textklang/synthesis/styles/Clustering/labels.is09_emo.csv")
-    print(labels)
-    plot(labels, title="EMO Verses PCA", save_file_path="vis/is09_emo_pca.png", legend=True, colors=None, plot_tsne=False)
+    #labels = cluster(features, k=5, save_file_path="/mount/arbeitsdaten/textklang/synthesis/styles/Clustering/labels.is09_emo.csv")
+    #print(labels)
+    #plot(labels, title="EMO Verses PCA", save_file_path="vis/is09_emo_pca.png", legend=True, colors=None, plot_tsne=False)
