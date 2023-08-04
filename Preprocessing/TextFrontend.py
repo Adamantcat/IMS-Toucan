@@ -469,7 +469,7 @@ def get_language_id(language):
     elif language == "ur":
         return torch.LongTensor([18])
     elif language == "ko":
-        return torch.LongTensor([18])
+        return torch.LongTensor([19])
     
 
 
