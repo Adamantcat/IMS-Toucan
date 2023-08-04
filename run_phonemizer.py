@@ -16,19 +16,19 @@ from Preprocessing.articulatory_features import generate_feature_table
 from Preprocessing.articulatory_features import get_feature_to_index_lookup
 from Preprocessing.articulatory_features import get_phone_to_id
 
-from flair.data import Sentence
-from flair.models import SequenceTagger
-import flair
+#from flair.data import Sentence
+#from flair.models import SequenceTagger
+# import flair
 
 import sys
 
 from Preprocessing.TextFrontend import ArticulatoryCombinedTextFrontend
 
-tf = ArticulatoryCombinedTextFrontend(language="fr")
+tf = ArticulatoryCombinedTextFrontend(language="ko")
 #tf.string_to_tensor("On ne le vit plus que par le dessous de sa nef et bientôt il disparut dans les profondeurs de l'azur.", view=True)
 #tf.string_to_tensor('Nous allons rester plus longtemps, nous n’avons plus de travail! On veut plus de devoirs à l’école. J’aime le vin plus que la bière. C’était plus intéressant que je ne pensais. C’était le plus intéressant.', view=True)
 #tf.string_to_tensor("je ne t'aime pas j'aime mon chat plus que toi.", view=True)
-tf.string_to_tensor("Que prévoit la proposition de loi pour faciliter les adoptions?", view=True)
+tf.string_to_tensor("오늘이 오늘이소서 매일이 오늘이소서", view=True)
 
 
 sys.exit(0)
