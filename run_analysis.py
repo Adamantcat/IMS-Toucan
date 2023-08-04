@@ -9,6 +9,10 @@ from TrainingInterfaces.Text_to_Spectrogram.AutoAligner.Aligner import Aligner
 from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.DurationCalculator import DurationCalculator
 from Preprocessing.TextFrontend import ArticulatoryCombinedTextFrontend
 
+import warnings
+warnings.filterwarnings("ignore")
+
+
 def get_avg_dur_phones(audio_path, transcript):
     phone_durations = list()
     pause_durations = list()
@@ -55,9 +59,12 @@ def get_speaking_rate_and_pause_durs(path_to_transcript, hop_length=256, sr=1600
     pause_durs = list()
 
     for audio_file, transcript in path_to_transcript.items():
+        # print(audio_file)
         phones, pauses = get_avg_dur_phones(audio_file, transcript)
+        # print(pauses)
         phone_durs += phones
         pause_durs += pauses
+    print(pause_durs)
     
     # print(len(phone_durs))
     # print(len(pause_durs))
@@ -134,9 +141,12 @@ def path_to_transcript_dict(poem_dir):
 if __name__ == '__main__':
     import sys
     
-    for poem in os.listdir("/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_2/Test"):
+    # for poem in os.listdir("/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_2/Test"):
+    # for poem in os.listdir("/Users/kockja/Documents/textklang/PlottingPoetry/audios/test/Karlsson/prose"):
+    for poem in os.listdir("/Users/kockja/Documents/textklang/PlottingPoetry/Test"):
         print(poem)
-        path_to_transcript = path_to_transcript_dict(f"/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_2/Test/{poem}")
+        path_to_transcript = path_to_transcript_dict(f"/Users/kockja/Documents/textklang/PlottingPoetry/Test/{poem}")
+        # path_to_transcript = path_to_transcript_dict(f"/mount/arbeitsdaten/textklang/synthesis/Maerchen/Synthesis_Data_2/Test/{poem}")
         sr, pl = get_speaking_rate_and_pause_durs(path_to_transcript)
         print("speaking_rate:")
         print(sr.item())

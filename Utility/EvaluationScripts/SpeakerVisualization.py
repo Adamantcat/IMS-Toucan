@@ -123,3 +123,8 @@ class Visualizer:
             sims.append(torch.cosine_similarity(reference_embedding, comp_emb, dim=0))
 
         return (sum(sims) / len(sims)).item(), numpy.std(sims)
+
+if __name__ == '__main__':
+    vs = Visualizer()
+    sim = vs.calculate_spk_sim("/Users/kockja/Documents/teaching/Thesis_Zhenliang/test_audios/vctk_org/p230_003_mic1.flac", "/Users/kockja/Documents/teaching/Thesis_Zhenliang/test_audios/vctk_p230_50/p230_50_003/FastSpeech2_BitFit_vctk_p230_50data_003.mp3")
+    print(sim)

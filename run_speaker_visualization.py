@@ -81,16 +81,24 @@ def visualize_speakers_languages_crossover():
 def calculate_spk_sims_multiling():
     ltf = dict()
     vs = Visualizer()
-    for file in os.listdir("audios/speakers_for_plotting"):
+    for file in os.listdir("/Users/kockja/Documents/teaching/Thesis_Zhenliang/test_audios/vctk_p230_50"):
         label = file.split("_")[0]
         if label not in ltf:
             ltf[label] = list()
-        ltf[label].append(f"audios/speakers_for_plotting/{file}")
-    for reference in os.listdir("audios/multilanguage_references"):
+        ltf[label].append(f"{file}")
+    for reference in os.listdir("/Users/kockja/Documents/teaching/Thesis_Zhenliang/test_audios/vctk_org"):
         label = reference.split(".")[0]
         print(label)
-        print(vs.calculate_spk_sim(f"audios/multilanguage_references/{reference}", ltf[label]))
+        print(vs.calculate_spk_sim(f"/Users/kockja/Documents/teaching/Thesis_Zhenliang/test_audios/vctk_org/{reference}", ltf[label]))
 
 
 if __name__ == '__main__':
-    calculate_spk_sims_multiling()
+    import soundfile as sf
+    comparisons = []
+    for file in os.listdir("/Users/kockja/Documents/teaching/Thesis_Zhenliang/test_audios/BitFit"):
+        wave, sr = sf.read(f"/Users/kockja/Documents/teaching/Thesis_Zhenliang/test_audios/BitFit/{file}")
+        comparisons.append(wave)
+    # calculate_spk_sims_multiling()
+    vs = Visualizer(sr=16000)
+    sim = vs.calculate_spk_sim("/Users/kockja/Documents/teaching/Thesis_Zhenliang/test_audios/vctk_org/p230_003_mic1.wav", comparisons)
+    print(sim)
