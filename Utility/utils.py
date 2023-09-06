@@ -5,7 +5,287 @@ Taken from ESPNet, modified by Florian Lux
 import os
 from abc import ABC
 
+import librosa.display as lbd
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
+import torch.multiprocessing
+from matplotlib.lines import Line2D
+
+import Layers.ConditionalLayerNorm
+from Preprocessing.TextFrontend import ArticulatoryCombinedTextFrontend
+from Preprocessing.TextFrontend import get_language_id
+
+
+def float2pcm(sig, dtype='int16'):
+    """
+    https://gist.github.com/HudsonHuang/fbdf8e9af7993fe2a91620d3fb86a182
+    """
+    sig = np.asarray(sig)
+    if sig.dtype.kind != 'f':
+        raise TypeError("'sig' must be a float array")
+    dtype = np.dtype(dtype)
+    if dtype.kind not in 'iu':
+        raise TypeError("'dtype' must be an integer type")
+    i = np.iinfo(dtype)
+    abs_max = 2 ** (i.bits - 1)
+    offset = i.min + abs_max
+    return (sig * abs_max + offset).clip(i.min, i.max).astype(dtype)
+
+
+def make_estimated_durations_usable_for_inference(xs, offset=1.0):
+    return torch.clamp(torch.round(xs.exp() - offset), min=0).long()
+
+
+def cut_to_multiple_of_n(x, n=4, return_diff=False, seq_dim=1):
+    max_frames = x.shape[seq_dim] // n * n
+    if return_diff:
+        return x[:, :max_frames], x.shape[seq_dim] - max_frames
+    return x[:, :max_frames]
+
+
+def pad_to_multiple_of_n(x, n=4, seq_dim=1, pad_value=0):
+    max_frames = ((x.shape[seq_dim] // n) + 1) * n
+    diff = max_frames - x.shape[seq_dim]
+    return torch.nn.functional.pad(x, [0, 0, 0, diff, 0, 0], mode="constant", value=pad_value)
+
+
+def kl_beta(step_counter, kl_cycle_steps):
+    return min([(1 / (kl_cycle_steps / ((step_counter % kl_cycle_steps) + 1))), 1.0]) * 0.01
+
+
+@torch.inference_mode()
+def plot_progress_spec(net,
+                       device,
+                       save_dir,
+                       step,
+                       lang,
+                       default_emb,
+                       before_and_after_postnet=False,
+                       run_postflow=True):
+    tf = ArticulatoryCombinedTextFrontend(language=lang)
+    sentence = tf.get_example_sentence(lang=lang)
+    if sentence is None:
+        return None
+    phoneme_vector = tf.string_to_tensor(sentence).squeeze(0).to(device)
+    if run_postflow:
+        spec, durations, pitch, energy = net.inference(text=phoneme_vector,
+                                                       return_duration_pitch_energy=True,
+                                                       utterance_embedding=default_emb,
+                                                       lang_id=get_language_id(lang).to(device),
+                                                       run_postflow=run_postflow)
+    else:
+        spec, durations, pitch, energy = net.inference(text=phoneme_vector,
+                                                       return_duration_pitch_energy=True,
+                                                       utterance_embedding=default_emb,
+                                                       lang_id=get_language_id(lang).to(device))
+
+    if before_and_after_postnet:
+        # ToucanTTS case, because there it's more interesting
+        spec_before, spec_after = spec
+
+        spec = spec_before.transpose(0, 1).to("cpu").numpy()
+        duration_splits, label_positions = cumsum_durations(durations.cpu().numpy())
+        os.makedirs(os.path.join(save_dir, "spec_before"), exist_ok=True)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
+        lbd.specshow(spec,
+                     ax=ax,
+                     sr=16000,
+                     cmap='GnBu',
+                     y_axis='mel',
+                     x_axis=None,
+                     hop_length=256)
+        ax.yaxis.set_visible(False)
+        ax.set_xticks(duration_splits, minor=True)
+        ax.xaxis.grid(True, which='minor')
+        ax.set_xticks(label_positions, minor=False)
+        phones = tf.get_phone_string(sentence, for_plot_labels=True)
+        ax.set_xticklabels(phones)
+        word_boundaries = list()
+        for label_index, word_boundary in enumerate(phones):
+            if word_boundary == "|":
+                word_boundaries.append(label_positions[label_index])
+        ax.vlines(x=duration_splits, colors="green", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.5)
+        ax.vlines(x=word_boundaries, colors="orange", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.5)
+        pitch_array = pitch.cpu().numpy()
+        for pitch_index, xrange in enumerate(zip(duration_splits[:-1], duration_splits[1:])):
+            if pitch_array[pitch_index] > 0.001:
+                ax.hlines(pitch_array[pitch_index] * 1000, xmin=xrange[0], xmax=xrange[1], color="red",
+                          linestyles="solid",
+                          linewidth=1.0)
+        ax.set_title(sentence)
+        plt.savefig(os.path.join(os.path.join(save_dir, "spec_before"), f"{step}.png"))
+        plt.clf()
+        plt.close()
+
+        spec = spec_after.transpose(0, 1).to("cpu").numpy()
+        duration_splits, label_positions = cumsum_durations(durations.cpu().numpy())
+        os.makedirs(os.path.join(save_dir, "spec_after"), exist_ok=True)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
+        lbd.specshow(spec,
+                     ax=ax,
+                     sr=16000,
+                     cmap='GnBu',
+                     y_axis='mel',
+                     x_axis=None,
+                     hop_length=256)
+        ax.yaxis.set_visible(False)
+        ax.set_xticks(duration_splits, minor=True)
+        ax.xaxis.grid(True, which='minor')
+        ax.set_xticks(label_positions, minor=False)
+        phones = tf.get_phone_string(sentence, for_plot_labels=True)
+        ax.set_xticklabels(phones)
+        word_boundaries = list()
+        for label_index, word_boundary in enumerate(phones):
+            if word_boundary == "|":
+                word_boundaries.append(label_positions[label_index])
+        ax.vlines(x=duration_splits, colors="green", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.0)
+        ax.vlines(x=word_boundaries, colors="orange", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.0)
+        pitch_array = pitch.cpu().numpy()
+        for pitch_index, xrange in enumerate(zip(duration_splits[:-1], duration_splits[1:])):
+            if pitch_array[pitch_index] > 0.001:
+                ax.hlines(pitch_array[pitch_index] * 1000, xmin=xrange[0], xmax=xrange[1], color="blue",
+                          linestyles="solid",
+                          linewidth=0.5)
+        ax.set_title(sentence)
+        plt.savefig(os.path.join(os.path.join(save_dir, "spec_after"), f"{step}.png"))
+        plt.clf()
+        plt.close()
+        return os.path.join(os.path.join(save_dir, "spec_before"), f"{step}.png"), os.path.join(
+            os.path.join(save_dir, "spec_after"), f"{step}.png")
+
+    else:
+        # FastSpeech case, standard
+        spec = spec.transpose(0, 1).to("cpu").numpy()
+        duration_splits, label_positions = cumsum_durations(durations.cpu().numpy())
+        if not os.path.exists(os.path.join(save_dir, "spec")):
+            os.makedirs(os.path.join(save_dir, "spec"))
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
+        lbd.specshow(spec,
+                     ax=ax,
+                     sr=16000,
+                     cmap='GnBu',
+                     y_axis='mel',
+                     x_axis=None,
+                     hop_length=256)
+        ax.yaxis.set_visible(False)
+        ax.set_xticks(duration_splits, minor=True)
+        ax.xaxis.grid(True, which='minor')
+        ax.set_xticks(label_positions, minor=False)
+        phones = tf.get_phone_string(sentence, for_plot_labels=True)
+        ax.set_xticklabels(phones)
+        word_boundaries = list()
+        for label_index, word_boundary in enumerate(phones):
+            if word_boundary == "|":
+                word_boundaries.append(label_positions[label_index])
+        ax.vlines(x=duration_splits, colors="green", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.0)
+        ax.vlines(x=word_boundaries, colors="orange", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.0)
+        pitch_array = pitch.cpu().numpy()
+        for pitch_index, xrange in enumerate(zip(duration_splits[:-1], duration_splits[1:])):
+            if pitch_array[pitch_index] > 0.001:
+                ax.hlines(pitch_array[pitch_index] * 1000, xmin=xrange[0], xmax=xrange[1], color="blue",
+                          linestyles="solid",
+                          linewidth=0.5)
+        ax.set_title(sentence)
+        plt.savefig(os.path.join(os.path.join(save_dir, "spec"), f"{step}.png"))
+        plt.clf()
+        plt.close()
+        return os.path.join(os.path.join(save_dir, "spec"), f"{step}.png")
+
+
+@torch.inference_mode()
+def plot_progress_spec_toucantts(net,
+                                 device,
+                                 save_dir,
+                                 step,
+                                 lang,
+                                 default_emb,
+                                 run_postflow=True):
+    tf = ArticulatoryCombinedTextFrontend(language=lang)
+    sentence = tf.get_example_sentence(lang=lang)
+    if sentence is None:
+        return None
+    phoneme_vector = tf.string_to_tensor(sentence).squeeze(0).to(device)
+    if run_postflow:
+        spec_before, spec_after, durations, pitch, energy = net.inference(text=phoneme_vector,
+                                                                          return_duration_pitch_energy=True,
+                                                                          utterance_embedding=default_emb,
+                                                                          lang_id=get_language_id(lang).to(device),
+                                                                          run_postflow=run_postflow)
+    else:
+        spec_before, spec_after, durations, pitch, energy = net.inference(text=phoneme_vector,
+                                                                          return_duration_pitch_energy=True,
+                                                                          utterance_embedding=default_emb,
+                                                                          lang_id=get_language_id(lang).to(device))
+    spec = spec_before.transpose(0, 1).to("cpu").numpy()
+    duration_splits, label_positions = cumsum_durations(durations.cpu().numpy())
+    os.makedirs(os.path.join(save_dir, "spec_before"), exist_ok=True)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
+    lbd.specshow(spec,
+                 ax=ax,
+                 sr=16000,
+                 cmap='GnBu',
+                 y_axis='mel',
+                 x_axis=None,
+                 hop_length=256)
+    ax.yaxis.set_visible(False)
+    ax.set_xticks(duration_splits, minor=True)
+    ax.xaxis.grid(True, which='minor')
+    ax.set_xticks(label_positions, minor=False)
+    phones = tf.get_phone_string(sentence, for_plot_labels=True)
+    ax.set_xticklabels(phones)
+    word_boundaries = list()
+    for label_index, word_boundary in enumerate(phones):
+        if word_boundary == "|":
+            word_boundaries.append(label_positions[label_index])
+    ax.vlines(x=duration_splits, colors="green", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.0)
+    ax.vlines(x=word_boundaries, colors="orange", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.0)
+    pitch_array = pitch.cpu().numpy()
+    for pitch_index, xrange in enumerate(zip(duration_splits[:-1], duration_splits[1:])):
+        if pitch_array[pitch_index] > 0.001:
+            ax.hlines(pitch_array[pitch_index] * 1000, xmin=xrange[0], xmax=xrange[1], color="magenta",
+                      linestyles="solid",
+                      linewidth=1.0)
+    ax.set_title(sentence)
+    plt.savefig(os.path.join(os.path.join(save_dir, "spec_before"), f"{step}.png"))
+    plt.clf()
+    plt.close()
+
+    spec = spec_after.transpose(0, 1).to("cpu").numpy()
+    duration_splits, label_positions = cumsum_durations(durations.cpu().numpy())
+    os.makedirs(os.path.join(save_dir, "spec_after"), exist_ok=True)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
+    lbd.specshow(spec,
+                 ax=ax,
+                 sr=16000,
+                 cmap='GnBu',
+                 y_axis='mel',
+                 x_axis=None,
+                 hop_length=256)
+    ax.yaxis.set_visible(False)
+    ax.set_xticks(duration_splits, minor=True)
+    ax.xaxis.grid(True, which='minor')
+    ax.set_xticks(label_positions, minor=False)
+    phones = tf.get_phone_string(sentence, for_plot_labels=True)
+    ax.set_xticklabels(phones)
+    word_boundaries = list()
+    for label_index, word_boundary in enumerate(phones):
+        if word_boundary == "|":
+            word_boundaries.append(label_positions[label_index])
+    ax.vlines(x=duration_splits, colors="green", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.0)
+    ax.vlines(x=word_boundaries, colors="orange", linestyles="dotted", ymin=0.0, ymax=8000, linewidth=1.0)
+    pitch_array = pitch.cpu().numpy()
+    for pitch_index, xrange in enumerate(zip(duration_splits[:-1], duration_splits[1:])):
+        if pitch_array[pitch_index] > 0.001:
+            ax.hlines(pitch_array[pitch_index] * 1000, xmin=xrange[0], xmax=xrange[1], color="magenta",
+                      linestyles="solid",
+                      linewidth=1.0)
+    ax.set_title(sentence)
+    plt.savefig(os.path.join(os.path.join(save_dir, "spec_after"), f"{step}.png"))
+    plt.clf()
+    plt.close()
+    return os.path.join(os.path.join(save_dir, "spec_before"), f"{step}.png"), os.path.join(
+        os.path.join(save_dir, "spec_after"), f"{step}.png")
 
 
 def cumsum_durations(durations):
@@ -31,16 +311,52 @@ def delete_old_checkpoints(checkpoint_dir, keep=5):
         return
     else:
         checkpoint_list.sort(reverse=False)
-        checkpoints_to_delete = [os.path.join(checkpoint_dir, "checkpoint_{}.pt".format(step)) for step in checkpoint_list[:-keep]]
+        checkpoints_to_delete = [os.path.join(checkpoint_dir, "checkpoint_{}.pt".format(step)) for step in
+                                 checkpoint_list[:-keep]]
         for old_checkpoint in checkpoints_to_delete:
             os.remove(os.path.join(old_checkpoint))
+
+
+def plot_grad_flow(named_parameters):
+    """
+    Plots the gradients flowing through different layers in the net during training.
+    Can be used for checking for possible gradient vanishing / exploding problems.
+
+    Usage: Plug this function after loss.backwards() and unscaling as
+    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow
+    """
+    ave_grads = []
+    max_grads = []
+    layers = []
+    for n, p in named_parameters:
+        if p.requires_grad and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean())
+            max_grads.append(p.grad.abs().max())
+    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+    plt.hlines(0, 0, len(ave_grads) + 1, lw=2, color="k")
+    plt.xticks(range(0, len(ave_grads), 1), layers, rotation="vertical")
+    plt.xlim(left=0, right=len(ave_grads))
+    plt.ylim(bottom=-0.001, top=0.02)  # zoom in on the lower gradient regions
+    plt.xlabel("Layers")
+    plt.ylabel("Gradient")
+    plt.title("Gradient Flow")
+    plt.grid(True)
+    plt.legend([Line2D([0], [0], color="c", lw=4),
+                Line2D([0], [0], color="b", lw=4),
+                Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+    plt.show()
 
 
 def get_most_recent_checkpoint(checkpoint_dir, verbose=True):
     checkpoint_list = list()
     for el in os.listdir(checkpoint_dir):
-        if el.endswith(".pt") and el != "best.pt":
-            checkpoint_list.append(int(el.split(".")[0].split("_")[1]))
+        if el.endswith(".pt") and el != "best.pt" and el != "embedding_function.pt":
+            try:
+                checkpoint_list.append(int(el.split(".")[0].split("_")[1]))
+            except ValueError:
+                pass
     if len(checkpoint_list) == 0:
         print("No previous checkpoints found, cannot reload.")
         return None
@@ -148,7 +464,11 @@ def initialize(model, init):
 
     # reset some modules with default init
     for m in model.modules():
-        if isinstance(m, (torch.nn.Embedding, torch.nn.LayerNorm)):
+        if isinstance(m, (torch.nn.Embedding,
+                          torch.nn.LayerNorm,
+                          Layers.ConditionalLayerNorm.ConditionalLayerNorm,
+                          Layers.ConditionalLayerNorm.SequentialWrappableConditionalLayerNorm
+                          )):
             m.reset_parameters()
 
 
@@ -319,5 +639,39 @@ def to_device(m, x):
     else:
         raise TypeError(
             "Expected torch.nn.Module or torch.tensor, " f"bot got: {type(m)}"
-            )
+        )
     return x.to(device)
+
+
+def curve_smoother(curve):
+    if len(curve) < 3:
+        return curve
+    new_curve = list()
+    for index in range(len(curve)):
+        if curve[index] != 0:
+            current_value = curve[index]
+            if index != len(curve) - 1:
+                if curve[index + 1] != 0:
+                    next_value = curve[index + 1]
+                else:
+                    next_value = curve[index]
+            if index != 0:
+                if curve[index - 1] != 0:
+                    prev_value = curve[index - 1]
+                else:
+                    prev_value = curve[index]
+            else:
+                prev_value = curve[index]
+            smooth_value = (current_value * 3 + prev_value + next_value) / 5
+            new_curve.append(smooth_value)
+        else:
+            new_curve.append(0)
+    return new_curve
+
+
+if __name__ == '__main__':
+    data = np.random.randn(50)
+    plt.plot(data, color="b")
+    smooth = curve_smoother(data)
+    plt.plot(smooth, color="g")
+    plt.show()

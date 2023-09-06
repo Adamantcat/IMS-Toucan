@@ -148,16 +148,16 @@ class FastSpeechDataset(Dataset):
             # done with datapoint creation
             # =============================
 
-            if ctc_selection:
+            if ctc_selection and len(self.datapoints) > 300:  # for less than 300 datapoints, we should not throw away anything.
                 # now we can filter out some bad datapoints based on the CTC scores we collected
                 mean_ctc = sum(self.ctc_losses) / len(self.ctc_losses)
                 std_dev = statistics.stdev(self.ctc_losses)
-                threshold = mean_ctc + std_dev
+                threshold = mean_ctc + (std_dev * 1.5)
                 for index in range(len(self.ctc_losses), 0, -1):
                     if self.ctc_losses[index - 1] > threshold:
                         self.datapoints.pop(index - 1)
                         print(
-                            f"Removing datapoint {index - 1}, because the CTC loss is one standard deviation higher than the mean. \n ctc: {round(self.ctc_losses[index - 1], 4)} vs. mean: {round(mean_ctc, 4)}")
+                            f"Removing datapoint {index - 1}, because the CTC loss is 1.5 standard deviations higher than the mean. \n ctc: {round(self.ctc_losses[index - 1], 4)} vs. mean: {round(mean_ctc, 4)}")
 
             # save to cache
             if len(self.datapoints) > 0:
@@ -176,14 +176,14 @@ class FastSpeechDataset(Dataset):
 
     def __getitem__(self, index):
         return self.datapoints[index][0], \
-               self.datapoints[index][1], \
-               self.datapoints[index][2], \
-               self.datapoints[index][3], \
-               self.datapoints[index][4], \
-               self.datapoints[index][5], \
-               self.datapoints[index][6], \
-               self.datapoints[index][7], \
-               self.language_id
+            self.datapoints[index][1], \
+            self.datapoints[index][2], \
+            self.datapoints[index][3], \
+            self.datapoints[index][4], \
+            self.datapoints[index][5], \
+            self.datapoints[index][6], \
+            self.datapoints[index][7], \
+            self.language_id
 
     def __len__(self):
         return len(self.datapoints)

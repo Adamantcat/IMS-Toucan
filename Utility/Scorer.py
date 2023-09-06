@@ -16,7 +16,7 @@ from Preprocessing.TextFrontend import get_language_id
 from Preprocessing.articulatory_features import get_feature_to_index_lookup
 from TrainingInterfaces.Spectrogram_to_Embedding.StyleEmbedding import StyleEmbedding
 from TrainingInterfaces.Text_to_Spectrogram.AutoAligner.Aligner import Aligner
-from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.FastSpeech2 import FastSpeech2
+from TrainingInterfaces.Text_to_Spectrogram.ToucanTTS.ToucanTTS import ToucanTTS
 from Utility.corpus_preparation import prepare_fastspeech_corpus
 from Utility.storage_config import MODELS_DIR
 
@@ -79,7 +79,7 @@ class AlignmentScorer:
 class TTSScorer:
 
     def __init__(self,
-                 path_to_fastspeech_model,
+                 path_to_model,
                  device,
                  path_to_embedding_checkpoint=os.path.join(MODELS_DIR, "Embedding", "embedding_function.pt")
                  ):
@@ -88,17 +88,17 @@ class TTSScorer:
         self.path_to_id = dict()
         self.nans = list()
         self.nan_indexes = list()
-        self.tts = FastSpeech2()
-        checkpoint = torch.load(path_to_fastspeech_model, map_location='cpu')
+        self.tts = ToucanTTS()
+        checkpoint = torch.load(path_to_model, map_location='cpu')
         weights = checkpoint["model"]
         try:
             self.tts.load_state_dict(weights)
         except RuntimeError:
             try:
-                self.tts = FastSpeech2(lang_embs=None)
+                self.tts = ToucanTTS(lang_embs=None)
                 self.tts.load_state_dict(weights)
             except RuntimeError:
-                self.tts = FastSpeech2(lang_embs=None, utt_embed_dim=None)
+                self.tts = ToucanTTS(lang_embs=None, utt_embed_dim=None)
                 self.tts.load_state_dict(weights)
         self.style_embedding_function = StyleEmbedding().to(device)
         check_dict = torch.load(path_to_embedding_checkpoint, map_location=device)
@@ -108,11 +108,11 @@ class TTSScorer:
         self.nans_removed = False
         self.current_dset = None
 
-    def score(self, path_to_fastspeech_dataset, lang_id):
+    def score(self, path_to_toucantts_dataset, lang_id):
         """
         call this to update the path_to_score dict with scores for this dataset
         """
-        dataset = prepare_fastspeech_corpus(dict(), path_to_fastspeech_dataset, lang_id)
+        dataset = prepare_fastspeech_corpus(dict(), path_to_toucantts_dataset, lang_id)
         self.current_dset = dataset
         self.nans = list()
         self.nan_indexes = list()
@@ -122,16 +122,21 @@ class TTSScorer:
             text, text_len, spec, spec_len, duration, energy, pitch, embed, filepath = dataset.datapoints[index]
             style_embedding = self.style_embedding_function(batch_of_spectrograms=spec.unsqueeze(0).to(self.device),
                                                             batch_of_spectrogram_lengths=spec_len.unsqueeze(0).to(self.device))
-            loss = self.tts(text_tensors=text.unsqueeze(0).to(self.device),
-                            text_lengths=text_len.to(self.device),
-                            gold_speech=spec.unsqueeze(0).to(self.device),
-                            speech_lengths=spec_len.to(self.device),
-                            gold_durations=duration.unsqueeze(0).to(self.device),
-                            gold_pitch=pitch.unsqueeze(0).to(self.device),
-                            gold_energy=energy.unsqueeze(0).to(self.device),
-                            utterance_embedding=style_embedding.to(self.device),
-                            lang_ids=get_language_id(lang_id).unsqueeze(0).to(self.device),
-                            return_mels=False)
+            try:
+                l1_loss, duration_loss, pitch_loss, energy_loss, glow_loss = self.tts(text_tensors=text.unsqueeze(0).to(self.device),
+                                    text_lengths=text_len.to(self.device),
+                                    gold_speech=spec.unsqueeze(0).to(self.device),
+                                    speech_lengths=spec_len.to(self.device),
+                                    gold_durations=duration.unsqueeze(0).to(self.device),
+                                    gold_pitch=pitch.unsqueeze(0).to(self.device),
+                                    gold_energy=energy.unsqueeze(0).to(self.device),
+                                    utterance_embedding=style_embedding.to(self.device),
+                                    lang_ids=get_language_id(lang_id).unsqueeze(0).to(self.device),
+                                    return_mels=False,
+                                    run_glow=False)
+                loss = l1_loss + duration_loss + pitch_loss + energy_loss  # we omit the glow loss
+            except TypeError:
+                loss = torch.tensor(torch.nan)
             if torch.isnan(loss):
                 self.nans.append(filepath)
                 self.nan_indexes.append(index)

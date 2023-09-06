@@ -38,7 +38,7 @@ class ArticulatoryCombinedTextFrontend:
             "˧": 3,
             "˨": 2,
             "˩": 1
-            }
+        }
         self.rising_perms = list()
         self.falling_perms = list()
         self.peaking_perms = list()
@@ -106,7 +106,7 @@ class ArticulatoryCombinedTextFrontend:
 
         elif language == "fr":
             self.g2p_lang = "fr-fr"
-            self.expand_abbreviations = lambda x: x
+            self.expand_abbreviations = remove_french_spacing
             if not silent:
                 print("Created a French Text-Frontend")
 
@@ -121,6 +121,12 @@ class ArticulatoryCombinedTextFrontend:
             self.expand_abbreviations = lambda x: x
             if not silent:
                 print("Created a Portuguese Text-Frontend")
+
+        elif language == "pt-br":
+            self.g2p_lang = "pt-br"
+            self.expand_abbreviations = lambda x: x
+            if not silent:
+                print("Created a Brazilian Portuguese Text-Frontend")
 
         elif language == "pl":
             self.g2p_lang = "pl"
@@ -152,33 +158,13 @@ class ArticulatoryCombinedTextFrontend:
             if not silent:
                 print("Created a Farsi Text-Frontend")
 
-        elif language == "hy":
-            self.g2p_lang = "hy"
-            self.expand_abbreviations = lambda x: x
-            if not silent:
-                print("Created an Armenian Text-Frontend")
-
-        elif language == "ur":
-            self.g2p_lang = "ur"
-            self.expand_abbreviations = lambda x: x
-            if not silent:
-                print("Created an Urdu Text-Frontend")
-
-        elif language == "ko":
-            self.g2p_lang = "ko"
-            self.expand_abbreviations = lambda x: x
-            if not silent:
-                print("Created an Korean Text-Frontend")
-
-
-
-        # remember to also update get_language_id() below when adding something here
-
         else:
             print("Language not supported yet")
             sys.exit()
 
-        if self.g2p_lang != "cmn" or self.g2p_lang != "cmn-latn-pinyin":
+        # remember to also update get_language_id() below when adding something here, as well as the get_example_sentence function
+
+        if self.g2p_lang != "cmn" and self.g2p_lang != "cmn-latn-pinyin":
             self.phonemizer_backend = EspeakBackend(language=self.g2p_lang,
                                                     punctuation_marks=';:,.!?¡¿—…"«»“”~/。【】、‥،؟“”؛',
                                                     preserve_punctuation=True,
@@ -188,6 +174,41 @@ class ArticulatoryCombinedTextFrontend:
         self.phone_to_vector = generate_feature_table()
         self.phone_to_id = get_phone_to_id()
         self.id_to_phone = {v: k for k, v in self.phone_to_id.items()}
+
+    @staticmethod
+    def get_example_sentence(lang):
+        if lang == "en":
+            return "This is a complex sentence, it even has a pause!"
+        elif lang == "de":
+            return "Dies ist ein komplexer Satz, er hat sogar eine Pause!"
+        elif lang == "el":
+            return "Αυτή είναι μια σύνθετη πρόταση, έχει ακόμη και παύση!"
+        elif lang == "es":
+            return "Esta es una oración compleja, ¡incluso tiene una pausa!"
+        elif lang == "fi":
+            return "Tämä on monimutkainen lause, sillä on jopa tauko!"
+        elif lang == "ru":
+            return "Это сложное предложение, в нем даже есть пауза!"
+        elif lang == "hu":
+            return "Ez egy összetett mondat, még szünet is van benne!"
+        elif lang == "nl":
+            return "Dit is een complexe zin, er zit zelfs een pauze in!"
+        elif lang == "fr":
+            return "C'est une phrase complexe, elle a même une pause !"
+        elif lang == "pt" or lang == "pt-br":
+            return "Esta é uma frase complexa, tem até uma pausa!"
+        elif lang == "pl":
+            return "To jest zdanie złożone, ma nawet pauzę!"
+        elif lang == "it":
+            return "Questa è una frase complessa, ha anche una pausa!"
+        elif lang == "cmn":
+            return "这是一个复杂的句子，它甚至包含一个停顿。"
+        elif lang == "vi":
+            return "Đây là một câu phức tạp, nó thậm chí còn chứa một khoảng dừng."
+        else:
+            print(f"No example sentence specified for the language: {lang}\n "
+                  f"Please specify an example sentence in the get_example_sentence function in Preprocessing/TextFrontend to track your progress.")
+            return None
 
     def string_to_tensor(self, text, view=False, device="cpu", handle_missing=True, input_phonemes=False):
         """
@@ -221,6 +242,9 @@ class ArticulatoryCombinedTextFrontend:
             elif char == '\u0306':
                 # shortened
                 phones_vector[-1][get_feature_to_index_lookup()["shortened"]] = 1
+            elif char == '̃':
+                # nasalized (vowel)
+                phones_vector[-1][get_feature_to_index_lookup()["nasal"]] = 1
             elif char == "˥":
                 # very high tone
                 phones_vector[-1][get_feature_to_index_lookup()["very-high-tone"]] = 1
@@ -266,6 +290,7 @@ class ArticulatoryCombinedTextFrontend:
     def get_phone_string(self, text, include_eos_symbol=True, for_feature_extraction=False, for_plot_labels=False):
         # expand abbreviations
         utt = self.expand_abbreviations(text)
+
         # phonemize
         if self.g2p_lang == "cmn-latn-pinyin" or self.g2p_lang == "cmn":
             phones = pinyin_to_ipa(utt)
@@ -307,6 +332,12 @@ class ArticulatoryCombinedTextFrontend:
             ("؛", ","),
             ("《", '"'),
             ("》", '"'),
+            ("？", "?"),
+            ("！", "!"),
+            (" ：", ":"),
+            (" ；", ";"),
+            ("－", "-"),
+            ("·", " "),
             # latin script punctuation
             ("/", " "),
             ("—", ""),
@@ -324,6 +355,7 @@ class ArticulatoryCombinedTextFrontend:
             ("ɬ", "s"),  # lateral
             ("ɮ", "z"),  # lateral
             ('ɺ', 'ɾ'),  # lateral
+            ('ʲ', 'j'),  # decomposed palatalization
             ('\u02CC', ""),  # secondary stress
             ('\u030B', "˥"),
             ('\u0301', "˦"),
@@ -339,17 +371,20 @@ class ArticulatoryCombinedTextFrontend:
             ("꜒", "˥"),
             # symbols that indicate a pause or silence
             ('"', "~"),
-            ("-", "~"),
-            ("-", "~"),
+            (" - ", "~ "),
+            ("- ", "~ "),
+            ("-", ""),
             ("…", "."),
             (":", "~"),
             (";", "~"),
             (",", "~")  # make sure this remains the final one when adding new ones
-            ]
+        ]
         unsupported_ipa_characters = {'̹', '̙', '̞', '̯', '̤', '̪', '̩', '̠', '̟', 'ꜜ',
-                                      '̃', '̬', '̽', 'ʰ', '|', '̝', '•', 'ˠ', '↘',
-                                      '‖', '̰', '‿', 'ᷝ', '̈', 'ᷠ', '̜', 'ʷ', 'ʲ',
+                                      '̬', '̽', 'ʰ', '|', '̝', '•', 'ˠ', '↘',
+                                      '‖', '̰', '‿', 'ᷝ', '̈', 'ᷠ', '̜', 'ʷ',
                                       '̚', '↗', 'ꜛ', '̻', '̥', 'ˁ', '̘', '͡', '̺'}
+        # TODO support more of these. Problem: bridge over to aligner ID lookups after modifying the feature vector
+        #  https://en.wikipedia.org/wiki/IPA_number
         for char in unsupported_ipa_characters:
             replacements.append((char, ""))
 
@@ -371,7 +406,8 @@ class ArticulatoryCombinedTextFrontend:
                 ('⭨', ""),  # falling
                 ('⮃', ""),  # dipping
                 ('⮁', ""),  # peaking
-                ]
+                ('̃', ""),  # nasalizing
+            ]
         for replacement in replacements:
             phoneme_string = phoneme_string.replace(replacement[0], replacement[1])
         phones = re.sub("~+", "~", phoneme_string)
@@ -406,6 +442,24 @@ class ArticulatoryCombinedTextFrontend:
 
         return phones
 
+    def text_vectors_to_id_sequence(self, text_vector):
+        tokens = list()
+        for vector in text_vector:
+            if vector[get_feature_to_index_lookup()["word-boundary"]] == 0:
+                # we don't include word boundaries when performing alignment, since they are not always present in audio.
+                features = vector.cpu().numpy().tolist()
+                if vector[get_feature_to_index_lookup()["vowel"]] == 1 and vector[get_feature_to_index_lookup()["nasal"]] == 1:
+                    # for the sake of alignment, we ignore the difference between nasalized vowels and regular vowels
+                    features[get_feature_to_index_lookup()["nasal"]] = 0
+                features = features[13:]
+                # the first 12 dimensions are for modifiers, so we ignore those when trying to find the phoneme in the ID lookup
+                for phone in self.phone_to_vector:
+                    if features == self.phone_to_vector[phone][13:]:
+                        tokens.append(self.phone_to_id[phone])
+                        # this is terribly inefficient, but it's fine
+                        break
+        return tokens
+
 
 def english_text_expansion(text):
     """
@@ -422,12 +476,14 @@ def english_text_expansion(text):
     return text
 
 
+def remove_french_spacing(text):
+    text = text.replace(" »", '"').replace("« ", '"')
+    for punc in ["!", ";", ":", ".", ",", "?", "-"]:
+        text = text.replace(f" {punc}", punc)
+    return text
+
+
 def convert_kanji_to_pinyin_mandarin(text):
-    # somehow the phonemizer looses the tone information, but
-    # after the conversion to pinyin it is still there. Maybe
-    # we need a better conversion from pinyin to IPA that
-    # includes tone symbols if espeak-ng doesn't do a good job
-    # on this.
     return " ".join([x[0] for x in pinyin(text)])
 
 
@@ -464,13 +520,8 @@ def get_language_id(language):
         return torch.LongTensor([15])
     elif language == "fa":
         return torch.LongTensor([16])
-    elif language == "hy":
+    elif language == "pt-br":
         return torch.LongTensor([17])
-    elif language == "ur":
-        return torch.LongTensor([18])
-    elif language == "ko":
-        return torch.LongTensor([19])
-    
 
 
 if __name__ == '__main__':
@@ -488,3 +539,8 @@ if __name__ == '__main__':
     tf = ArticulatoryCombinedTextFrontend(language="vi")
     tf.string_to_tensor("Xin chào thế giới, quả là một ngày tốt lành để học nói tiếng Việt!", view=True)
     tf.string_to_tensor("ba bà bá bạ bả bã", view=True)
+
+    tf = ArticulatoryCombinedTextFrontend(language="fr")
+    tf.string_to_tensor("Je ne te fais pas un dessin.", view=True)
+    print(tf.get_phone_string("Je ne te fais pas un dessin."))
+    print(tf.string_to_tensor("un", view=True))

@@ -1,6 +1,3 @@
-import math
-
-import numpy
 import torch
 
 from TrainingInterfaces.Spectrogram_to_Embedding.GST import StyleEncoder
@@ -38,31 +35,24 @@ class StyleEmbedding(torch.nn.Module):
                                           element in the batch (b, 1)
             return_all_outs: boolean indicating whether the output will be used for a feature matching loss
         Returns:
-            batch of 128 dimensional embeddings (b,128)
+            batch of 256 dimensional embeddings (b,256)
         """
 
-        window_size = 256  # Zipf distribution suggests 64 would be best, because GST can actually get confused by padding. But that's too little information
-        # on the time axis to accurately learn a style. So instead, we concatenate each spectrogram with itself until we reach at least 256.
-        list_of_specs = list()
+        minimum_sequence_length = 812
+        specs = list()
         for index, spec_length in enumerate(batch_of_spectrogram_lengths):
             spec = batch_of_spectrograms[index][:spec_length]
-            current_spec_length = spec_length.cpu().item()
-            if current_spec_length < window_size:
+            # double the length at least once, then check
+            spec = spec.repeat((2, 1))
+            current_spec_length = len(spec)
+            while current_spec_length < minimum_sequence_length:
                 # make it longer
-                repeat_factor = math.ceil((window_size * 2) / spec_length)
-                spec = spec.repeat((repeat_factor, 1))
+                spec = spec.repeat((2, 1))
                 current_spec_length = len(spec)
-            if current_spec_length > window_size:
-                # take random window
-                frames_to_remove = current_spec_length - window_size
-                remove_front = numpy.random.randint(low=0, high=frames_to_remove)
-                list_of_specs.append(spec[remove_front:remove_front + window_size])
-            elif current_spec_length == window_size:
-                # take as is
-                list_of_specs.append(spec)
+            specs.append(spec[:812])
 
-        batch_of_spectrograms_unified_length = torch.stack(list_of_specs, dim=0)
-        return self.gst(batch_of_spectrograms_unified_length,
+        spec_batch = torch.stack(specs, dim=0)
+        return self.gst(speech=spec_batch,
                         return_all_outs=return_all_outs,
                         return_only_ref=return_only_refs)
 
@@ -71,7 +61,7 @@ if __name__ == '__main__':
     style_emb = StyleEmbedding()
     print(f"GST parameter count: {sum(p.numel() for p in style_emb.gst.parameters() if p.requires_grad)}")
 
-    seq_length = 142
+    seq_length = 398
     print(style_emb(torch.randn(5, seq_length, 80),
                     torch.tensor([seq_length, seq_length, seq_length, seq_length, seq_length]),
-                    return_only_refs=True).shape)
+                    return_only_refs=False).shape)

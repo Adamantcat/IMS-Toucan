@@ -6,7 +6,6 @@
 
 
 import torch
-from torch.nn import Conv1d
 
 from Layers.ResidualBlock import HiFiGANResidualBlock as ResidualBlock
 
@@ -18,10 +17,10 @@ class HiFiGANGenerator(torch.nn.Module):
                  out_channels=1,
                  channels=512,
                  kernel_size=7,
-                 upsample_scales=(8, 6, 4, 4),  # CAREFUL: Avocodo assumes that there are always 4 upsample scales, because it takes intermediate results.
-                 upsample_kernel_sizes=(16, 12, 8, 8),
+                 upsample_scales=(8, 6, 4, 2),  # CAREFUL: Avocodo assumes that there are always 4 upsample scales, because it takes intermediate results.
+                 upsample_kernel_sizes=(16, 12, 8, 4),
                  resblock_kernel_sizes=(3, 7, 11),
-                 resblock_dilations=[(1, 3, 5), (1, 3, 5), (1, 3, 5)],
+                 resblock_dilations=((1, 3, 5), (1, 3, 5), (1, 3, 5)),
                  use_additional_convs=True,
                  bias=True,
                  nonlinear_activation="LeakyReLU",
@@ -87,8 +86,8 @@ class HiFiGANGenerator(torch.nn.Module):
                             1,
                             padding=(kernel_size - 1) // 2, ), torch.nn.Tanh(), )
 
-        self.out_proj_x1 = Conv1d(512 // 4, 1, 7, 1, padding=3)
-        self.out_proj_x2 = Conv1d(512 // 8, 1, 7, 1, padding=3)
+        self.out_proj_x1 = torch.nn.Conv1d(512 // 4, 1, 7, 1, padding=3)
+        self.out_proj_x2 = torch.nn.Conv1d(512 // 8, 1, 7, 1, padding=3)
 
         # apply weight norm
         self.apply_weight_norm()

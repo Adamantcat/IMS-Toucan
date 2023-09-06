@@ -1,7 +1,6 @@
 import os
 import time
 
-import auraloss
 import torch
 import torch.multiprocessing
 import wandb
@@ -27,8 +26,7 @@ def train_loop(generator,
                batch_size=32,
                epochs=100,
                resume=False,
-               use_signal_processing_losses=False,  # https://github.com/csteinmetz1/auraloss remember to cite if used
-               generator_steps_per_discriminator_step=2,
+               generator_steps_per_discriminator_step=3,
                generator_warmup=30000,
                use_wandb=False,
                finetune=False
@@ -44,13 +42,9 @@ def train_loop(generator,
     discriminator_adv_criterion = DiscriminatorAdversarialLoss().to(device)
     generator_adv_criterion = GeneratorAdversarialLoss(average_by_discriminators=False).to(device)
 
-    signal_processing_loss_functions = list()
-    if use_signal_processing_losses:
-        signal_processing_loss_functions.append(auraloss.time.SNRLoss().to(device))
-        signal_processing_loss_functions.append(auraloss.time.SISDRLoss().to(device))
-
     g = generator.to(device)
     d = discriminator.to(device)
+
     g.train()
     d.train()
     optimizer_g = torch.optim.RAdam(g.parameters(), betas=(0.5, 0.9), lr=0.001, weight_decay=0.0)
@@ -77,8 +71,8 @@ def train_loop(generator,
             optimizer_d.load_state_dict(check_dict["discriminator_optimizer"])
             scheduler_g.load_state_dict(check_dict["generator_scheduler"])
             scheduler_d.load_state_dict(check_dict["discriminator_scheduler"])
-            d.load_state_dict(check_dict["discriminator"])
             step_counter = check_dict["step_counter"]
+        d.load_state_dict(check_dict["discriminator"])
         g.load_state_dict(check_dict["generator"])
 
     start_time = time.time()
@@ -91,7 +85,6 @@ def train_loop(generator,
         mel_losses = list()
         feat_match_losses = list()
         adversarial_losses = list()
-        signal_processing_losses = list()
 
         optimizer_g.zero_grad()
         optimizer_d.zero_grad()
@@ -107,14 +100,7 @@ def train_loop(generator,
             pred_wave, intermediate_wave_upsampled_twice, intermediate_wave_upsampled_once = g(melspec)
 
             mel_loss = mel_l1(pred_wave.squeeze(1), gold_wave)
-            generator_total_loss = mel_loss * 30.0  # 15 less than the Avocodo Paper
-
-            if use_signal_processing_losses:
-                signal_loss = torch.tensor([0.0]).to(device)
-                for sl in signal_processing_loss_functions:
-                    signal_loss += sl(pred_wave, gold_wave)
-                generator_total_loss = generator_total_loss + signal_loss
-                signal_processing_losses.append(signal_loss.item())
+            generator_total_loss = mel_loss * 45.0  # according to the Avocodo Paper
 
             if step_counter > generator_warmup + 100:  # a bit of warmup helps, but it's not that important
                 d_outs = d(wave=pred_wave,
@@ -122,7 +108,7 @@ def train_loop(generator,
                            intermediate_wave_upsampled_once=intermediate_wave_upsampled_once)
                 adversarial_loss = generator_adv_criterion(d_outs)
                 adversarial_losses.append(adversarial_loss.item())
-                generator_total_loss = generator_total_loss + adversarial_loss
+                generator_total_loss = generator_total_loss + adversarial_loss * 2  # based on own experience
 
                 d_gold_outs = d(gold_wave)
                 feature_matching_loss = feat_match_criterion(d_outs, d_gold_outs)
@@ -166,26 +152,23 @@ def train_loop(generator,
         if epoch % epochs_per_save == 0:
             g.eval()
             torch.save({
-                "generator":               g.state_dict(),
-                "discriminator":           d.state_dict(),
-                "generator_optimizer":     optimizer_g.state_dict(),
+                "generator"              : g.state_dict(),
+                "discriminator"          : d.state_dict(),
+                "generator_optimizer"    : optimizer_g.state_dict(),
                 "discriminator_optimizer": optimizer_d.state_dict(),
-                "generator_scheduler":     scheduler_g.state_dict(),
+                "generator_scheduler"    : scheduler_g.state_dict(),
                 "discriminator_scheduler": scheduler_d.state_dict(),
-                "step_counter":            step_counter
+                "step_counter"           : step_counter
             }, os.path.join(model_save_dir, "checkpoint_{}.pt".format(step_counter)))
             g.train()
             delete_old_checkpoints(model_save_dir, keep=5)
 
         # LOGGING
         log_dict = dict()
-        log_dict["Steps"] = step_counter
         log_dict["Generator Loss"] = round(sum(generator_losses) / len(generator_losses), 3)
         log_dict["Mel Loss"] = round(sum(mel_losses) / len(mel_losses), 3)
         if len(feat_match_losses) > 0:
             log_dict["Feature Matching Loss"] = round(sum(feat_match_losses) / len(feat_match_losses), 3)
-        if len(signal_processing_losses) > 0:
-            log_dict["Signal Processing Loss"] = round(sum(signal_processing_losses) / len(signal_processing_losses), 3)
         if len(adversarial_losses) > 0:
             log_dict["Adversarial Loss"] = round(sum(adversarial_losses) / len(adversarial_losses), 3)
         if len(discriminator_losses) > 0:
@@ -196,4 +179,4 @@ def train_loop(generator,
             print(f"{key}: {log_dict[key]}")
 
         if use_wandb:
-            wandb.log(log_dict)
+            wandb.log(log_dict, step=step_counter)

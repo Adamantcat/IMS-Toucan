@@ -6,29 +6,50 @@ import os
 
 import torch
 
+from TrainingInterfaces.Spectrogram_to_Wave.BigVGAN.BigVGAN import BigVGAN
 from TrainingInterfaces.Spectrogram_to_Wave.HiFiGAN.HiFiGAN import HiFiGANGenerator
-from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.FastSpeech2 import FastSpeech2
+from TrainingInterfaces.Text_to_Spectrogram.StochasticToucanTTS.StochasticToucanTTS import StochasticToucanTTS
+from TrainingInterfaces.Text_to_Spectrogram.ToucanTTS.ToucanTTS import ToucanTTS
 from Utility.storage_config import MODELS_DIR
 
 
-def load_net_fast(path):
+def load_net_toucan(path):
     check_dict = torch.load(path, map_location=torch.device("cpu"))
     try:
-        net = FastSpeech2()
-        net.load_state_dict(check_dict["model"])
-    except RuntimeError:
         try:
-            net = FastSpeech2(lang_embs=None)
+            net = ToucanTTS()
             net.load_state_dict(check_dict["model"])
         except RuntimeError:
-            net = FastSpeech2(lang_embs=None, utt_embed_dim=None)
+            try:
+                net = ToucanTTS(lang_embs=None)
+                net.load_state_dict(check_dict["model"])
+            except RuntimeError:
+                net = ToucanTTS(lang_embs=None, utt_embed_dim=None)
+                net.load_state_dict(check_dict["model"])
+    except RuntimeError:
+        try:
+            net = StochasticToucanTTS()
             net.load_state_dict(check_dict["model"])
+        except RuntimeError:
+            try:
+                net = StochasticToucanTTS(lang_embs=None)
+                net.load_state_dict(check_dict["model"])
+            except RuntimeError:
+                net = StochasticToucanTTS(lang_embs=None, utt_embed_dim=None)
+                net.load_state_dict(check_dict["model"])
     return net, check_dict["default_emb"]
 
 
 def load_net_hifigan(path):
     check_dict = torch.load(path, map_location=torch.device("cpu"))
     net = HiFiGANGenerator()
+    net.load_state_dict(check_dict["generator"])
+    return net, None  # does not have utterance embedding
+
+
+def load_net_bigvgan(path):
+    check_dict = torch.load(path, map_location=torch.device("cpu"))
+    net = BigVGAN()
     net.load_state_dict(check_dict["generator"])
     return net, None  # does not have utterance embedding
 
@@ -95,20 +116,27 @@ def save_model_for_use(model, name="", default_embed=None, dict_name="model"):
     print("...done!")
 
 
-def make_best_in_all(n=3):
+def make_best_in_all():
     for model_dir in os.listdir(MODELS_DIR):
         if os.path.isdir(os.path.join(MODELS_DIR, model_dir)):
             if "HiFiGAN" in model_dir or "Avocodo" in model_dir:
-                checkpoint_paths = get_n_recent_checkpoints_paths(checkpoint_dir=os.path.join(MODELS_DIR, model_dir), n=n)
+                checkpoint_paths = get_n_recent_checkpoints_paths(checkpoint_dir=os.path.join(MODELS_DIR, model_dir), n=3)
                 if checkpoint_paths is None:
                     continue
                 averaged_model, _ = average_checkpoints(checkpoint_paths, load_func=load_net_hifigan)
                 save_model_for_use(model=averaged_model, name=os.path.join(MODELS_DIR, model_dir, "best.pt"), dict_name="generator")
-            elif "FastSpeech2" in model_dir:
-                checkpoint_paths = get_n_recent_checkpoints_paths(checkpoint_dir=os.path.join(MODELS_DIR, model_dir), n=n)
+
+            elif "BigVGAN" in model_dir:
+                checkpoint_paths = get_n_recent_checkpoints_paths(checkpoint_dir=os.path.join(MODELS_DIR, model_dir), n=3)
                 if checkpoint_paths is None:
                     continue
-                averaged_model, default_embed = average_checkpoints(checkpoint_paths, load_func=load_net_fast)
+                averaged_model, _ = average_checkpoints(checkpoint_paths, load_func=load_net_bigvgan)
+                save_model_for_use(model=averaged_model, name=os.path.join(MODELS_DIR, model_dir, "best.pt"), dict_name="generator")
+            elif "ToucanTTS" in model_dir:
+                checkpoint_paths = get_n_recent_checkpoints_paths(checkpoint_dir=os.path.join(MODELS_DIR, model_dir), n=3)
+                if checkpoint_paths is None:
+                    continue
+                averaged_model, default_embed = average_checkpoints(checkpoint_paths, load_func=load_net_toucan)
                 save_model_for_use(model=averaged_model, default_embed=default_embed, name=os.path.join(MODELS_DIR, model_dir, "best.pt"))
 
 
@@ -119,8 +147,13 @@ def count_parameters(net):
 def show_all_models_params():
     from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.FastSpeech2 import FastSpeech2
     print("Number of (trainable) Parameters in FastSpeech2: {}".format(count_parameters(FastSpeech2())))
+    from TrainingInterfaces.Spectrogram_to_Embedding.StyleEmbedding import StyleEmbedding
+    print("Number of (trainable) Parameters in GST: {}".format(count_parameters(StyleEmbedding())))
+    from TrainingInterfaces.Spectrogram_to_Wave.HiFiGAN.HiFiGAN import HiFiGANGenerator
+    print("Number of (trainable) Parameters in the HiFiGAN Generator: {}".format(count_parameters(HiFiGANGenerator())))
+    from TrainingInterfaces.Spectrogram_to_Wave.BigVGAN.BigVGAN import BigVGAN
+    print("Number of (trainable) Parameters in the BigVGAN Generator: {}".format(count_parameters(BigVGAN())))
 
 
 if __name__ == '__main__':
-    show_all_models_params()
-    make_best_in_all(n=3)
+    make_best_in_all()

@@ -35,14 +35,14 @@ class ResNet_G(nn.Module):
             blocks += [
                 ResNetBlock(nf0, nf1, bn=self.bn, res_ratio=res_ratio),
                 nn.Upsample(scale_factor=2)
-                ]
+            ]
 
         nf0 = min(nf * 2, nf_max)
         nf1 = min(nf, nf_max)
         blocks += [
             ResNetBlock(nf0, nf1, bn=self.bn, res_ratio=res_ratio),
             ResNetBlock(nf1, nf1, bn=self.bn, res_ratio=res_ratio)
-            ]
+        ]
 
         self.resnet = nn.Sequential(*blocks)
         self.conv_img = nn.Conv2d(nf, 3, 3, padding=1)
@@ -98,7 +98,7 @@ class ResNet_D(nn.Module):
         blocks = [
             ResNetBlock(nf0, nf0, bn=False, res_ratio=res_ratio),
             ResNetBlock(nf0, nf1, bn=False, res_ratio=res_ratio)
-            ]
+        ]
 
         self.fc_input = nn.Linear(data_dim, 3 * size * size)
 
@@ -108,7 +108,7 @@ class ResNet_D(nn.Module):
             blocks += [
                 nn.AvgPool2d(3, stride=2, padding=1),
                 ResNetBlock(nf0, nf1, bn=False, res_ratio=res_ratio),
-                ]
+            ]
 
         self.conv_img = nn.Conv2d(3, 1 * nf, 3, padding=1)
         self.relu = nn.LeakyReLU(0.2, inplace=True)

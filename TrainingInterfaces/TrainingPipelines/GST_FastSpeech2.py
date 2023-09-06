@@ -2,7 +2,6 @@
 This is the setup with which the embedding model is trained. After the embedding model has been trained, it is only used in a frozen state.
 """
 
-import os
 import time
 
 import torch
@@ -13,22 +12,15 @@ from TrainingInterfaces.Spectrogram_to_Embedding.embedding_function_train_loop i
 from TrainingInterfaces.Text_to_Spectrogram.FastSpeech2.FastSpeech2 import FastSpeech2
 from Utility.corpus_preparation import prepare_fastspeech_corpus
 from Utility.path_to_transcript_dicts import *
-from Utility.storage_config import MODELS_DIR, PREPROCESSING_DIR
+from Utility.storage_config import MODELS_DIR
+from Utility.storage_config import PREPROCESSING_DIR
 
 
 def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb_resume_id):
     if gpu_id == "cpu":
-        os.environ["CUDA_VISIBLE_DEVICES"] = ""
         device = torch.device("cpu")
-
     else:
-        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
         device = torch.device("cuda")
-
-    torch.manual_seed(131714)
-    random.seed(131714)
-    torch.random.manual_seed(131714)
 
     print("Preparing")
 
@@ -39,6 +31,7 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
     os.makedirs(save_dir, exist_ok=True)
 
     datasets = list()
+
     datasets.append(prepare_fastspeech_corpus(transcript_dict={},
                                               corpus_dir=os.path.join(PREPROCESSING_DIR, "ravdess"),
                                               lang="en",
@@ -51,14 +44,6 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
 
     datasets.append(prepare_fastspeech_corpus(transcript_dict={},
                                               corpus_dir=os.path.join(PREPROCESSING_DIR, "libri_all_clean"),
-                                              lang="en"))
-
-    datasets.append(prepare_fastspeech_corpus(transcript_dict={},
-                                              corpus_dir=os.path.join(PREPROCESSING_DIR, "Nancy"),
-                                              lang="en"))
-
-    datasets.append(prepare_fastspeech_corpus(transcript_dict={},
-                                              corpus_dir=os.path.join(PREPROCESSING_DIR, "LJSpeech"),
                                               lang="en"))
 
     # for the next iteration, we should add an augmented noisy version of e.g. Nancy,

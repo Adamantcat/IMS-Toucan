@@ -8,6 +8,13 @@ from Layers.DurationPredictor import DurationPredictorLoss
 from Utility.utils import make_non_pad_mask
 
 
+def weights_nonzero_speech(target):
+    # target : B x T x mel
+    # Assign weight 1.0 to all labels except for padding (id=0).
+    dim = target.size(-1)
+    return target.abs().sum(-1, keepdim=True).ne(0).float().repeat(1, 1, dim)
+
+
 class FastSpeech2Loss(torch.nn.Module):
 
     def __init__(self, use_masking=True, use_weighted_masking=False):
@@ -71,7 +78,7 @@ class FastSpeech2Loss(torch.nn.Module):
         # calculate loss
         l1_loss = self.l1_criterion(before_outs, ys)
         if after_outs is not None:
-            l1_loss += self.l1_criterion(after_outs, ys)
+            l1_loss = l1_loss + self.l1_criterion(after_outs, ys)
         duration_loss = self.duration_criterion(d_outs, ds)
         pitch_loss = self.mse_criterion(p_outs, ps)
         energy_loss = self.mse_criterion(e_outs, es)
@@ -79,6 +86,9 @@ class FastSpeech2Loss(torch.nn.Module):
         # make weighted mask and apply it
         if self.use_weighted_masking:
             out_masks = make_non_pad_mask(olens).unsqueeze(-1).to(ys.device)
+            out_masks = torch.nn.functional.pad(out_masks.transpose(1, 2),
+                                                [0, ys.size(1) - out_masks.size(1), 0, 0, 0, 0], value=False).transpose(1, 2)
+
             out_weights = out_masks.float() / out_masks.sum(dim=1, keepdim=True).float()
             out_weights /= ys.size(0) * ys.size(2)
             duration_masks = make_non_pad_mask(ilens).to(ys.device)

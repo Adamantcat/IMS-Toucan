@@ -3,37 +3,39 @@ import os
 import torch
 
 from InferenceInterfaces.Controllability.GAN import GanWrapper
-from InferenceInterfaces.FastSpeech2Interface import InferenceFastSpeech2
+from InferenceInterfaces.ToucanTTSInterface import ToucanTTSInterface
 from Utility.storage_config import MODELS_DIR
 
 
 class ControllableInterface:
 
-    def __init__(self, gpu_id="cpu"):
+    def __init__(self, gpu_id="cpu", available_artificial_voices=1000):
         if gpu_id == "cpu":
             os.environ["CUDA_VISIBLE_DEVICES"] = ""
         else:
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_id}"
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = InferenceFastSpeech2(device=self.device, model_name="Meta")
+        self.model = ToucanTTSInterface(device=self.device, tts_model_path="Meta")
         self.wgan = GanWrapper(os.path.join(MODELS_DIR, "Embedding", "embedding_gan.pt"), device=self.device)
+        self.generated_speaker_embeds = list()
+        self.available_artificial_voices = available_artificial_voices
         self.current_language = "English"
         self.current_accent = "English"
         self.language_id_lookup = {
-            "English":    "en",
-            "German":     "de",
-            "Greek":      "el",
-            "Spanish":    "es",
-            "Finnish":    "fi",
-            "Russian":    "ru",
-            "Hungarian":  "hu",
-            "Dutch":      "nl",
-            "French":     "fr",
-            'Polish':     "pl",
+            "English"   : "en",
+            "German"    : "de",
+            "Greek"     : "el",
+            "Spanish"   : "es",
+            "Finnish"   : "fi",
+            "Russian"   : "ru",
+            "Hungarian" : "hu",
+            "Dutch"     : "nl",
+            "French"    : "fr",
+            'Polish'    : "pl",
             'Portuguese': "pt",
-            'Italian':    "it",
-            'Chinese':    "cmn",
+            'Italian'   : "it",
+            'Chinese'   : "cmn",
             'Vietnamese': "vi",
         }
 
@@ -48,7 +50,10 @@ class ControllableInterface:
              energy_variance_scale,
              emb_slider_1,
              emb_slider_2,
-             emb_slider_6,
+             emb_slider_3,
+             emb_slider_4,
+             emb_slider_5,
+             emb_slider_6
              ):
         language = language.split()[0]
         accent = accent.split()[0]
@@ -60,17 +65,18 @@ class ControllableInterface:
             self.current_accent = accent
 
         self.wgan.set_latent(voice_seed)
-
-        controllability_vector = torch.tensor(
-            [emb_slider_1, emb_slider_2, 0.0, 0.0, 0.0, emb_slider_6], dtype=torch.float32)
+        controllability_vector = torch.tensor([emb_slider_1,
+                                               emb_slider_2,
+                                               emb_slider_3,
+                                               emb_slider_4,
+                                               emb_slider_5,
+                                               emb_slider_6], dtype=torch.float32)
         embedding = self.wgan.modify_embed(controllability_vector)
         self.model.set_utterance_embedding(embedding=embedding)
 
         phones = self.model.text2phone.get_phone_string(prompt)
         if len(phones) > 1800:
-            if language == "English":
-                prompt = "Your input was too long. Please try either a shorter text or split it into several parts."
-            elif language == "German":
+            if language == "German":
                 prompt = "Deine Eingabe war zu lang. Bitte versuche es entweder mit einem kürzeren Text oder teile ihn in mehrere Teile auf."
             elif language == "Greek":
                 prompt = "Η εισήγησή σας ήταν πολύ μεγάλη. Παρακαλώ δοκιμάστε είτε ένα μικρότερο κείμενο είτε χωρίστε το σε διάφορα μέρη."
@@ -96,12 +102,23 @@ class ControllableInterface:
                 prompt = "你的输入太长了。请尝试使用较短的文本或将其拆分为多个部分。"
             elif language == 'Vietnamese':
                 prompt = "Đầu vào của bạn quá dài. Vui lòng thử một văn bản ngắn hơn hoặc chia nó thành nhiều phần."
-            phones = self.model.text2phone.get_phone_string(prompt)
+            else:
+                prompt = "Your input was too long. Please try either a shorter text or split it into several parts."
+                if self.current_language != "English":
+                    self.model.set_phonemizer_language(self.language_id_lookup["English"])
+                    self.current_language = "English"
+                if self.current_accent != "English":
+                    self.model.set_accent_language(self.language_id_lookup["English"])
+                    self.current_accent = "English"
 
-        wav = self.model(phones,
-                         input_is_phones=True,
-                         duration_scaling_factor=duration_scaling_factor,
-                         pitch_variance_scale=pitch_variance_scale,
-                         energy_variance_scale=energy_variance_scale,
-                         pause_duration_scaling_factor=pause_duration_scaling_factor)
-        return 48000, wav
+        print(prompt)
+        wav, fig = self.model(prompt,
+                              input_is_phones=False,
+                              duration_scaling_factor=duration_scaling_factor,
+                              pitch_variance_scale=pitch_variance_scale,
+                              energy_variance_scale=energy_variance_scale,
+                              pause_duration_scaling_factor=pause_duration_scaling_factor,
+                              return_plot_as_filepath=True)
+        wav = wav.cpu().numpy()
+        wav = [val for val in wav for _ in (0, 1)]  # doubling the sampling rate for better compatibility (24kHz is not as standard as 48kHz)
+        return 48000, wav, fig

@@ -45,10 +45,11 @@ def train_loop(train_dataset,
         use_reconstruction: whether to use the auxiliary spectrogram reconstruction procedure/loss, which can make the alignment sharper
     """
     os.makedirs(save_directory, exist_ok=True)
+    torch.multiprocessing.set_sharing_strategy('file_system')
     train_loader = DataLoader(batch_size=batch_size,
                               dataset=train_dataset,
                               drop_last=True,
-                              num_workers=8,
+                              num_workers=8 if os.cpu_count() > 8 else max(os.cpu_count() - 2, 1),
                               pin_memory=False,
                               shuffle=True,
                               prefetch_factor=16,
@@ -133,7 +134,7 @@ def train_loop(train_dataset,
             "tts_model"    : tiny_tts.state_dict(),
             "tts_optimizer": optim_tts.state_dict(),
             "step_counter" : step_counter,
-            },
+        },
             os.path.join(save_directory, "aligner.pt"))
         print("Total Loss:   {}".format(round(loss_this_epoch, 3)))
         print("Time elapsed: {} Minutes".format(round((time.time() - start_time) / 60)))

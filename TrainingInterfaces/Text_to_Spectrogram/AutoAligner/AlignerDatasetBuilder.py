@@ -54,9 +54,9 @@ class AlignerDatasetBuilder(Dataset):
         self.speaker_embedding_func_ecapa = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb",
                                                                            run_opts={"device": str(device)},
                                                                            savedir=os.path.join(
-                                                                            MODELS_DIR, 
-                                                                            "SpeakerEmbedding", 
-                                                                            "speechbrain_speaker_embedding_ecapa"))
+                                                                               MODELS_DIR,
+                                                                               "Embedding",
+                                                                               "speechbrain_speaker_embedding_ecapa"))
 
     def build_cache(self,
                     transcript_dict,
@@ -142,7 +142,11 @@ class AlignerDatasetBuilder(Dataset):
             if self.path_to_transcript_dict[path].strip() == "":
                 continue
 
-            wave, sr = sf.read(path)
+            try:
+                wave, sr = sf.read(path)
+            except:
+                print(f"Problem with an audio file: {path}")
+                continue
             dur_in_seconds = len(wave) / sr
             if not (min_len <= dur_in_seconds <= max_len):
                 if verbose:
@@ -150,7 +154,8 @@ class AlignerDatasetBuilder(Dataset):
                 continue
             try:
                 with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")  # otherwise we get tons of warnings about an RNN not being in contiguous chunks
+                    warnings.simplefilter(
+                        "ignore")  # otherwise we get tons of warnings about an RNN not being in contiguous chunks
                     norm_wave = ap.audio_to_wave_tensor(normalize=True, audio=wave)
             except ValueError:
                 continue
@@ -163,11 +168,18 @@ class AlignerDatasetBuilder(Dataset):
             # raw audio preprocessing is done
             transcript = self.path_to_transcript_dict[path]
             try:
-                cached_text = tf.string_to_tensor(transcript, handle_missing=False, input_phonemes=phone_input).squeeze(0).cpu().numpy()
+                try:
+                    cached_text = tf.string_to_tensor(transcript, handle_missing=False, input_phonemes=phone_input).squeeze(0).cpu().numpy()
+                except KeyError:
+                    cached_text = tf.string_to_tensor(transcript, handle_missing=True, input_phonemes=phone_input).squeeze(0).cpu().numpy()
+                    if not allow_unknown_symbols:
+                        continue  # we skip sentences with unknown symbols
+            except ValueError:
+                # this can happen for Mandarin Chinese, when the syllabification of pinyin doesn't work. In that case, we just skip the sample.
+                continue
             except KeyError:
-                cached_text = tf.string_to_tensor(transcript, handle_missing=True, input_phonemes=phone_input).squeeze(0).cpu().numpy()
-                if not allow_unknown_symbols:
-                    continue  # we skip sentences with unknown symbols
+                # this can happen for Mandarin Chinese, when the syllabification of pinyin doesn't work. In that case, we just skip the sample.
+                continue
 
             cached_text_len = torch.LongTensor([len(cached_text)]).numpy()
             cached_speech = ap.audio_to_mel_spec_tensor(audio=norm_wave, normalize=False, explicit_sampling_rate=16000).transpose(0, 1).cpu().numpy()

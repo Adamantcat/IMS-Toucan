@@ -25,7 +25,7 @@ class WassersteinGanQuadraticCost:
             'D' : [],
             'WD': [],
             'G' : []
-            }
+        }
         self.num_steps = 0
         self.gen_steps = 0
         self.epochs = epochs
@@ -269,4 +269,4 @@ class WassersteinGanQuadraticCost:
             'critic_optimizer_state_dict': self.D_opt.state_dict(),
             'model_parameters'           : model_parameters,
             'iterations'                 : self.num_steps
-            }, model_filename)
+        }, model_filename)

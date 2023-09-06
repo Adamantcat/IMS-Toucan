@@ -1,5 +1,4 @@
 import torch
-from torch.nn import Conv1d
 
 from Layers.ResidualBlock import HiFiGANResidualBlock as ResidualBlock
 
@@ -12,17 +11,17 @@ class HiFiGANGenerator(torch.nn.Module):
                  out_channels=1,
                  channels=512,
                  kernel_size=7,
-                 upsample_scales=(8, 6, 4, 4),
-                 upsample_kernel_sizes=(16, 12, 8, 8),
+                 upsample_scales=(8, 6, 4, 2),
+                 upsample_kernel_sizes=(16, 12, 8, 4),
                  resblock_kernel_sizes=(3, 7, 11),
-                 resblock_dilations=[(1, 3, 5), (1, 3, 5), (1, 3, 5)],
+                 resblock_dilations=((1, 3, 5), (1, 3, 5), (1, 3, 5)),
                  use_additional_convs=True,
                  bias=True,
                  nonlinear_activation="LeakyReLU",
                  nonlinear_activation_params={"negative_slope": 0.1},
                  use_weight_norm=True, ):
         super().__init__()
-        assert kernel_size % 2 == 1, "Kernal size must be odd number."
+        assert kernel_size % 2 == 1, "Kernel size must be odd number."
         assert len(upsample_scales) == len(upsample_kernel_sizes)
         assert len(resblock_dilations) == len(resblock_kernel_sizes)
         self.num_upsamples = len(upsample_kernel_sizes)
@@ -59,8 +58,8 @@ class HiFiGANGenerator(torch.nn.Module):
                             padding=(kernel_size - 1) // 2, ),
             torch.nn.Tanh(), )
 
-        self.out_proj_x1 = Conv1d(512 // 4, 1, 7, 1, padding=3)
-        self.out_proj_x2 = Conv1d(512 // 8, 1, 7, 1, padding=3)
+        self.out_proj_x1 = torch.nn.Conv1d(512 // 4, 1, 7, 1, padding=3)
+        self.out_proj_x2 = torch.nn.Conv1d(512 // 8, 1, 7, 1, padding=3)
 
         if use_weight_norm:
             self.apply_weight_norm()

@@ -27,8 +27,8 @@ class MultiCoMBDiscriminator(torch.nn.Module):
         self.combd_2 = CoMBD(filters=channels, kernels=kernels[1], groups=groups, strides=strides)
         self.combd_3 = CoMBD(filters=channels, kernels=kernels[2], groups=groups, strides=strides)
 
-        self.pqmf_2 = PQMF(N=4, taps=256, cutoff=0.25, beta=10.0)
-        self.pqmf_4 = PQMF(N=16, taps=192, cutoff=0.13, beta=10.0)
+        self.pqmf_2 = PQMF(N=2, taps=256, cutoff=0.25, beta=10.0)
+        self.pqmf_4 = PQMF(N=8, taps=192, cutoff=0.13, beta=10.0)
 
     def forward(self, wave_final, intermediate_wave_upsampled_twice=None, intermediate_wave_upsampled_once=None):
 
@@ -140,7 +140,6 @@ class MultiSubBandDiscriminator(torch.nn.Module):
         fmap_hat.append(feat_q4_hat)
 
         return fmap_hat
-
 
 
 class CoMBD(torch.nn.Module):

@@ -12,6 +12,7 @@ class GanWrapper:
         self.mean = None
         self.std = None
         self.wgan = None
+        self.normalize = False
 
         self.load_model(path_wgan)
 
@@ -34,10 +35,10 @@ class GanWrapper:
         self.wgan.G.load_state_dict(gan_checkpoint['generator_state_dict'])
         self.wgan.D.load_state_dict(gan_checkpoint['critic_state_dict'])
 
-        self.mean = gan_checkpoint["mean"]
-        self.std = gan_checkpoint["std"]
+        self.mean = gan_checkpoint["dataset_mean"]
+        self.std = gan_checkpoint["dataset_std"]
 
-    def compute_controllability(self, n_samples=500000):
+    def compute_controllability(self, n_samples=50000):
         _, intermediate, z = self.wgan.sample_generator(num_samples=n_samples, nograd=True, return_intermediate=True)
         intermediate = intermediate.cpu()
         z = z.cpu()
@@ -55,22 +56,24 @@ class GanWrapper:
         self.wgan.G.eval()
         embed_original = self.wgan.G.module.forward(self.z.to(self.device))
 
-        embed_original = inverse_normalize(
-            embed_original.cpu(),
-            self.mean.cpu().unsqueeze(0),
-            self.std.cpu().unsqueeze(0)
-        )
+        if self.normalize:
+            embed_original = inverse_normalize(
+                embed_original.cpu(),
+                self.mean.cpu().unsqueeze(0),
+                self.std.cpu().unsqueeze(0)
+            )
         return embed_original
 
     def modify_embed(self, x):
         self.wgan.G.eval()
         z_new = self.z.squeeze() + torch.matmul(self.U.solution.t(), x)
         embed_modified = self.wgan.G.module.forward(z_new.unsqueeze(0).to(self.device))
-        embed_modified = inverse_normalize(
-            embed_modified.cpu(),
-            self.mean.cpu().unsqueeze(0),
-            self.std.cpu().unsqueeze(0)
-        )
+        if self.normalize:
+            embed_modified = inverse_normalize(
+                embed_modified.cpu(),
+                self.mean.cpu().unsqueeze(0),
+                self.std.cpu().unsqueeze(0)
+            )
         return embed_modified
 
 

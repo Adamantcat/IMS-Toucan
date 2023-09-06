@@ -1,7 +1,6 @@
 # Copyright 2020 Nagoya University (Tomoki Hayashi)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-
 import torch
 
 from Layers.Attention import MultiHeadedAttention as BaseMultiHeadedAttention
@@ -25,34 +24,35 @@ class StyleEncoder(torch.nn.Module):
             Kernel size of conv layers in the reference encoder.
         conv_stride (int, optional):
             Stride size of conv layers in the reference encoder.
-        gru_layers (int, optional): The number of GRU layers in the reference encoder.
-        gru_units (int, optional): The number of GRU units in the reference encoder.
+        gst_layers (int, optional): The number of GRU layers in the reference encoder.
+        gst_units (int, optional): The number of GRU units in the reference encoder.
     """
 
     def __init__(
-            self,
-            idim: int = 80,
-            gst_tokens: int = 10,
-            gst_token_dim: int = 128,
-            gst_heads: int = 4,
-            conv_layers: int = 6,
-            conv_chans_list=(32, 32, 64, 64, 128, 128),
-            conv_kernel_size: int = 3,
-            conv_stride: int = 2,
-            gru_layers: int = 1,
-            gru_units: int = 128,
+        self,
+        idim: int = 80,
+        gst_tokens: int = 2000,
+        gst_token_dim: int = 64,
+        gst_heads: int = 8,
+        conv_layers: int = 8,
+        conv_chans_list=(32, 32, 64, 64, 128, 128, 256, 256),
+        conv_kernel_size: int = 3,
+        conv_stride: int = 2,
+        gst_layers: int = 2,
+        gst_units: int = 256,
     ):
         """Initialize global style encoder module."""
         super(StyleEncoder, self).__init__()
 
+        self.num_tokens = gst_tokens
         self.ref_enc = ReferenceEncoder(idim=idim,
                                         conv_layers=conv_layers,
                                         conv_chans_list=conv_chans_list,
                                         conv_kernel_size=conv_kernel_size,
                                         conv_stride=conv_stride,
-                                        gru_layers=gru_layers,
-                                        gru_units=gru_units, )
-        self.stl = StyleTokenLayer(ref_embed_dim=gru_units,
+                                        gst_layers=gst_layers,
+                                        gst_units=gst_units, )
+        self.stl = StyleTokenLayer(ref_embed_dim=gst_units,
                                    gst_tokens=gst_tokens,
                                    gst_token_dim=gst_token_dim,
                                    gst_heads=gst_heads, )
@@ -77,6 +77,15 @@ class StyleEncoder(torch.nn.Module):
             return style_embs, [ref_embs] + [style_embs]
         return style_embs
 
+    def calculate_ada4_regularization_loss(self):
+        losses = list()
+        for emb1_index in range(self.num_tokens):
+            for emb2_index in range(emb1_index + 1, self.num_tokens):
+                if emb1_index != emb2_index:
+                    losses.append(torch.nn.functional.cosine_similarity(self.stl.gst_embs[emb1_index],
+                                                                        self.stl.gst_embs[emb2_index], dim=0))
+        return sum(losses)
+
 
 class ReferenceEncoder(torch.nn.Module):
     """Reference encoder module.
@@ -93,19 +102,19 @@ class ReferenceEncoder(torch.nn.Module):
             Kernel size of conv layers in the reference encoder.
         conv_stride (int, optional):
             Stride size of conv layers in the reference encoder.
-        gru_layers (int, optional): The number of GRU layers in the reference encoder.
-        gru_units (int, optional): The number of GRU units in the reference encoder.
+        gst_layers (int, optional): The number of GRU layers in the reference encoder.
+        gst_units (int, optional): The number of GRU units in the reference encoder.
     """
 
     def __init__(
-            self,
-            idim=80,
-            conv_layers: int = 6,
-            conv_chans_list=(32, 32, 64, 64, 128, 128),
-            conv_kernel_size: int = 3,
-            conv_stride: int = 2,
-            gru_layers: int = 1,
-            gru_units: int = 128,
+        self,
+        idim=80,
+        conv_layers: int = 6,
+        conv_chans_list=(32, 32, 64, 64, 128, 128),
+        conv_kernel_size: int = 3,
+        conv_stride: int = 2,
+        gst_layers: int = 1,
+        gst_units: int = 128,
     ):
         """Initialize reference encoder module."""
         super(ReferenceEncoder, self).__init__()
@@ -137,28 +146,28 @@ class ReferenceEncoder(torch.nn.Module):
         self.padding = padding
 
         # get the number of GRU input units
-        gru_in_units = idim
+        gst_in_units = idim
         for i in range(conv_layers):
-            gru_in_units = (gru_in_units - conv_kernel_size + 2 * padding) // conv_stride + 1
-        gru_in_units *= conv_out_chans
-        self.gru = torch.nn.GRU(gru_in_units, gru_units, gru_layers, batch_first=True)
+            gst_in_units = (gst_in_units - conv_kernel_size + 2 * padding) // conv_stride + 1
+        gst_in_units *= conv_out_chans
+        self.gst = torch.nn.GRU(gst_in_units, gst_units, gst_layers, batch_first=True)
 
     def forward(self, speech):
         """Calculate forward propagation.
         Args:
             speech (Tensor): Batch of padded target features (B, Lmax, idim).
         Returns:
-            Tensor: Reference embedding (B, gru_units)
+            Tensor: Reference embedding (B, gst_units)
         """
         batch_size = speech.size(0)
         xs = speech.unsqueeze(1)  # (B, 1, Lmax, idim)
         hs = self.convs(xs).transpose(1, 2)  # (B, Lmax', conv_out_chans, idim')
-        # NOTE(kan-bayashi): We need to care the length?
         time_length = hs.size(1)
-        hs = hs.contiguous().view(batch_size, time_length, -1)  # (B, Lmax', gru_units)
-        self.gru.flatten_parameters()
-        _, ref_embs = self.gru(hs)  # (gru_layers, batch_size, gru_units)
-        ref_embs = ref_embs[-1]  # (batch_size, gru_units)
+        hs = hs.contiguous().view(batch_size, time_length, -1)  # (B, Lmax', gst_units)
+        self.gst.flatten_parameters()
+        # pack_padded_sequence(hs, speech_lens, enforce_sorted=False, batch_first=True)
+        _, ref_embs = self.gst(hs)  # (gst_layers, batch_size, gst_units)
+        ref_embs = ref_embs[-1]  # (batch_size, gst_units)
 
         return ref_embs
 
@@ -178,12 +187,12 @@ class StyleTokenLayer(torch.nn.Module):
     """
 
     def __init__(
-            self,
-            ref_embed_dim: int = 128,
-            gst_tokens: int = 10,
-            gst_token_dim: int = 128,
-            gst_heads: int = 4,
-            dropout_rate: float = 0.0,
+        self,
+        ref_embed_dim: int = 128,
+        gst_tokens: int = 10,
+        gst_token_dim: int = 128,
+        gst_heads: int = 4,
+        dropout_rate: float = 0.0,
     ):
         """Initialize style token layer module."""
         super(StyleTokenLayer, self).__init__()

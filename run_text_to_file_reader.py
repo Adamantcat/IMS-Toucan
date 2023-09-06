@@ -2,11 +2,11 @@ import os
 
 import torch
 
-from InferenceInterfaces.FastSpeech2Interface import InferenceFastSpeech2
+from InferenceInterfaces.ToucanTTSInterface import ToucanTTSInterface
 
 
-def read_texts(model_id, sentence, filename, device="cpu", language="en", speaker_reference=None):
-    tts = InferenceFastSpeech2(device=device, model_name=model_id)
+def read_texts(model_id, sentence, filename, device="cpu", language="en", speaker_reference=None, faster_vocoder=False):
+    tts = ToucanTTSInterface(device=device, tts_model_path=model_id, faster_vocoder=faster_vocoder)
     tts.set_language(language)
     if speaker_reference is not None:
         tts.set_utterance_embedding(speaker_reference)
@@ -16,57 +16,36 @@ def read_texts(model_id, sentence, filename, device="cpu", language="en", speake
     del tts
 
 
-def read_texts_as_ensemble(model_id, sentence, filename, device="cpu", language="en", amount=10):
-    """
-    for this function, the filename should NOT contain the .wav ending, it's added automatically
-    """
-    tts = InferenceFastSpeech2(device=device, model_name=model_id)
-    tts.set_language(language)
-    if type(sentence) == str:
-        sentence = [sentence]
-    for index in range(amount):
-        tts.default_utterance_embedding = torch.zeros(704).float().random_(-40, 40).to(device)
-        tts.read_to_file(text_list=sentence, file_location=filename + f"_{index}" + ".wav")
+def the_raven(version, model_id="Meta", exec_device="cpu", speed_over_quality=True, speaker_reference=None):
+    os.makedirs("audios", exist_ok=True)
 
-
-def read_harvard_sentences(model_id, device):
-    tts = InferenceFastSpeech2(device=device, model_name=model_id)
-
-    with open("Utility/test_sentences_combined_3.txt", "r", encoding="utf8") as f:
-        sents = f.read().split("\n")
-    output_dir = "audios/harvard_03_{}".format(model_id)
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    for index, sent in enumerate(sents):
-        tts.read_to_file(text_list=[sent], file_location=output_dir + "/{}.wav".format(index))
-
-    with open("Utility/test_sentences_combined_6.txt", "r", encoding="utf8") as f:
-        sents = f.read().split("\n")
-    output_dir = "audios/harvard_06_{}".format(model_id)
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    for index, sent in enumerate(sents):
-        tts.read_to_file(text_list=[sent], file_location=output_dir + "/{}.wav".format(index))
-
-
-def read_contrastive_focus_sentences(model_id, device):
-    tts = InferenceFastSpeech2(device=device, model_name=model_id)
-
-    with open("Utility/contrastive_focus_test_sentences.txt", "r", encoding="utf8") as f:
-        sents = f.read().split("\n")
-    output_dir = "audios/focus_{}".format(model_id)
-    os.makedirs(output_dir, exist_ok=True)
-    for index, sent in enumerate(sents):
-        tts.read_to_file(text_list=[sent], file_location=output_dir + "/{}.wav".format(index))
+    read_texts(model_id=model_id,
+               sentence=['Once upon a midnight dreary, while I pondered, weak, and weary,',
+                         'Over many a quaint, and curious volume of forgotten lore,',
+                         'While I nodded, nearly napping, suddenly, there came a tapping,',
+                         'As of someone gently rapping, rapping at my chamber door.',
+                         'Tis some visitor, I muttered, tapping at my chamber door,',
+                         'Only this, and nothing more.',
+                         'Ah, distinctly, I remember, it was in the bleak December,',
+                         'And each separate dying ember, wrought its ghost upon the floor.',
+                         'Eagerly, I wished the morrow, vainly, I had sought to borrow',
+                         'From my books surcease of sorrow, sorrow, for the lost Lenore,',
+                         'For the rare and radiant maiden, whom the angels name Lenore,',
+                         'Nameless here, for evermore.',
+                         'And the silken, sad, uncertain, rustling of each purple curtain',
+                         'Thrilled me, filled me, with fantastic terrors, never felt before.'],
+               filename=f"audios/the_raven_{version}.wav",
+               device=exec_device,
+               language="en",
+               speaker_reference=speaker_reference,
+               faster_vocoder=speed_over_quality)
 
 
 if __name__ == '__main__':
     exec_device = "cuda" if torch.cuda.is_available() else "cpu"
-    os.makedirs("audios", exist_ok=True)
+    print(f"running on {exec_device}")
 
-    read_texts(model_id="Meta",
-               sentence="Es blüht ein schönes Blümchen, Auf unsrer grünen Au. Sein Aug' ist wie der Himmel, So heiter und so blau.",
-               filename="audios/test_zischler.wav",
-               device=exec_device,
-               speaker_reference="/Users/kockja/Documents/PhD/PoetryStyles/test_data/Hoelderlin_Bloedigkeit_Zischler_m_P_2020/Hoelderlin_Bloedigkeit_Zischler_m_P_2020_14.wav",
-               language="de")
+    the_raven(version="MetaBaseline",
+              model_id="Meta",
+              exec_device=exec_device,
+              speed_over_quality=exec_device != "cuda")
