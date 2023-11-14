@@ -377,6 +377,7 @@ class ArticulatoryCombinedTextFrontend:
             ("…", "."),
             (":", "~"),
             (";", "~"),
+            ("^", "~"),
             (",", "~")  # make sure this remains the final one when adding new ones
         ]
         unsupported_ipa_characters = {'̹', '̙', '̞', '̯', '̤', '̪', '̩', '̠', '̟', 'ꜜ',

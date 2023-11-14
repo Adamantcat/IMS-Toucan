@@ -13,6 +13,7 @@ singing/
 toucan_conda_venv/
 venv/
 vis/
+wandb/
 
 
 *_graph
@@ -29,3 +30,7 @@ run_phonemizer.py
 *.pyc
 *.png
 *.pdf
+*.log
+*.yaml
+*.csv
+*.txt

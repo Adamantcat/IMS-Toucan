@@ -14,6 +14,11 @@ from TrainingInterfaces.TrainingPipelines.ToucanTTS_IntegrationTest import run a
 from TrainingInterfaces.TrainingPipelines.ToucanTTS_MetaCheckpoint import run as meta
 from TrainingInterfaces.TrainingPipelines.ToucanTTS_Nancy import run as nancy
 from TrainingInterfaces.TrainingPipelines.finetuning_example import run as fine_tuning_example
+from TrainingInterfaces.TrainingPipelines.ToucanTTS_Poetry import run as finetune_poetry
+from TrainingInterfaces.TrainingPipelines.ToucanTTS_Poetry_Strophen import run as finetune_poetry_strophen
+from TrainingInterfaces.TrainingPipelines.ToucanTTS_Zischler import run as finetune_zischler
+from TrainingInterfaces.TrainingPipelines.ToucanTTS_Poetry_TAI_Hölderlin import run as tai_hölderlin
+from TrainingInterfaces.TrainingPipelines.ToucanTTS_Poetry_TAI_Schiller import run as tai_schiller
 from TrainingInterfaces.TrainingPipelines.pretrain_aligner import run as aligner
 
 pipeline_dict = {
@@ -23,9 +28,15 @@ pipeline_dict = {
     "fs_it"         : fs_integration_test,
     "tt_it"         : tt_integration_test,
     # regular ToucanTTS pipelines
+    
     "nancy"         : nancy,
     "nancystoch"    : nancystoch,
     "meta"          : meta,
+    "poetry"        : finetune_poetry,
+    "poetry_strophen"        : finetune_poetry_strophen,
+    "zischler"      : finetune_zischler,
+    "tai_hölderlin" : tai_hölderlin,
+    "tai_schiller" : tai_schiller,
     # training vocoders (not recommended, best to use provided checkpoint)
     "avocodo"       : hifi_codo,
     "bigvgan"       : bigvgan,

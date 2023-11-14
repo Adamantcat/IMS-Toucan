@@ -13,6 +13,86 @@ def limit_to_n(path_to_transcript_dict, n=40000):
     else:
         return path_to_transcript_dict
 
+def build_path_to_transcript_dict_poetry():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/Vers"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        if el == "problematic_files":
+            continue
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")                        
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript
+
+def build_path_to_transcript_dict_poetry_stanza():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/Strophe"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        if el == "problematic_files":
+            continue
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")                        
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript
+
+def build_path_to_transcript_dict_Hoelderlin():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/TAI/Hölderlin"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        print(el)
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")                        
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript
+
+def build_path_to_transcript_dict_Schiller():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/TAI/Schiller"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        print(el)
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")                        
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript
+
+def build_path_to_transcript_dict_zischler():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Interspeech_2022/train"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")                        
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript
 
 def build_path_to_transcript_dict_mls_italian():
     lang = "italian"
@@ -771,5 +851,6 @@ def build_path_to_transcript_dict_siwis_subset():
 
 
 if __name__ == '__main__':
-    ptt = build_path_to_transcript_dict_synpaflex_all()
+    ptt = build_path_to_transcript_dict_Schiller()
     print(ptt)
+    print(len(ptt))
