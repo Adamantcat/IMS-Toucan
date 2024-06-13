@@ -11,7 +11,7 @@ import torch
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-    from audioseal.builder import create_generator
+    # from audioseal.builder import create_generator
     from omegaconf import DictConfig
     from omegaconf import OmegaConf
     from speechbrain.pretrained import EncoderClassifier
@@ -43,11 +43,11 @@ class ToucanTTSInterface(torch.nn.Module):
             tts_model_path = os.path.join(MODELS_DIR, f"ToucanTTS_{tts_model_path}", "best.pt")
         if "USER" not in os.environ:
             os.environ["USER"] = ""  # that's the case under Windows, but omegaconf needs this
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            watermark_conf = cast(DictConfig, OmegaConf.load("InferenceInterfaces/audioseal_wm_16bits.yaml"))
-            self.watermark = create_generator(watermark_conf)
-            self.watermark.load_state_dict(torch.load("Models/audioseal/generator.pth", map_location="cpu")["model"])  # downloaded from https://dl.fbaipublicfiles.com/audioseal/6edcf62f/generator.pth originally
+        # with warnings.catch_warnings():
+        #     warnings.simplefilter("ignore")
+        #     watermark_conf = cast(DictConfig, OmegaConf.load("InferenceInterfaces/audioseal_wm_16bits.yaml"))
+        #     self.watermark = create_generator(watermark_conf)
+        #     self.watermark.load_state_dict(torch.load("Models/audioseal/generator.pth", map_location="cpu")["model"])  # downloaded from https://dl.fbaipublicfiles.com/audioseal/6edcf62f/generator.pth originally
 
         ################################
         #   build text to phone        #
@@ -187,8 +187,8 @@ class ToucanTTSInterface(torch.nn.Module):
         except ValueError:
             # if the audio is too short, a value error will arise
             pass
-        with torch.inference_mode():
-            wave = (torch.tensor(wave) + 0.1 * self.watermark.get_watermark(torch.tensor(wave).to(self.device).unsqueeze(0).unsqueeze(0)).squeeze().detach().cpu()).detach().numpy()
+        # with torch.inference_mode():
+        #    wave = (torch.tensor(wave) + 0.1 * self.watermark.get_watermark(torch.tensor(wave).to(self.device).unsqueeze(0).unsqueeze(0)).squeeze().detach().cpu()).detach().numpy()
 
         if view or return_plot_as_filepath:
             fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 5))
