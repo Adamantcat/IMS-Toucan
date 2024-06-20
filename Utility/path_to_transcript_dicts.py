@@ -503,6 +503,22 @@ def build_path_to_transcript_dict_thorsten_emotional(re_cache=False):
         torch.save(path_to_transcript, cache_path)
     return torch.load(cache_path)
 
+def build_path_to_transcript_dict_poetry():
+    root = "/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/Sprechweisen"
+    path_to_transcript = dict()
+    for el in os.listdir(root):
+        if os.path.isdir(os.path.join(root, el)):
+            with open(os.path.join(root, el, "transcript.txt"), "r", encoding="utf8") as file:
+                lookup = file.read()
+            for line in lookup.split("\n"):
+                if line.strip() != "":
+                    norm_transcript = line.split("\t")[1]
+                    wav_path = os.path.join(root, el, line.split("\t")[0] + ".wav")                        
+                    if os.path.exists(wav_path):
+                        path_to_transcript[wav_path] = norm_transcript
+    return path_to_transcript
+
+
 
 # FRENCH
 
@@ -2216,3 +2232,5 @@ def build_path_to_transcript_dict_mms_template(lang, root='/resources/speech/cor
 
 if __name__ == '__main__':
     pass
+    path_to_transcript_dict = build_path_to_transcript_dict_poetry()
+    print(len(path_to_transcript_dict))
