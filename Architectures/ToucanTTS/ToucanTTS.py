@@ -44,7 +44,7 @@ class ToucanTTS(torch.nn.Module):
 
     def __init__(self,
                  # network structure related
-                 input_feature_dimensions=62,
+                 input_feature_dimensions=63,
                  attention_dimension=384,
                  attention_heads=4,
                  positionwise_conv_kernel_size=1,
@@ -474,7 +474,7 @@ if __name__ == '__main__':
     print(sum(p.numel() for p in model.post_flow.parameters() if p.requires_grad))
 
     print(" TESTING INFERENCE ")
-    dummy_text_batch = torch.randint(low=0, high=2, size=[12, 62]).float()  # [Sequence Length, Features per Phone]
+    dummy_text_batch = torch.randint(low=0, high=2, size=[12, 63]).float()  # [Sequence Length, Features per Phone]
     dummy_utterance_embed = torch.randn([192])  # [Dimensions of Speaker Embedding]
     dummy_language_id = torch.LongTensor([2])
     print(model.inference(dummy_text_batch,
@@ -483,7 +483,7 @@ if __name__ == '__main__':
 
     print(" TESTING TRAINING ")
 
-    dummy_text_batch = torch.randint(low=0, high=2, size=[3, 3, 62]).float()  # [Batch, Sequence Length, Features per Phone]
+    dummy_text_batch = torch.randint(low=0, high=2, size=[3, 3, 63]).float()  # [Batch, Sequence Length, Features per Phone]
     dummy_text_lens = torch.LongTensor([2, 3, 3])
 
     dummy_speech_batch = torch.randn([3, 30, 128])  # [Batch, Sequence Length, Spectrogram Buckets]

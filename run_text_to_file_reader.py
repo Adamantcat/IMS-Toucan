@@ -57,11 +57,24 @@ def die_glocke(version, model_id="Meta", exec_device="cpu", speaker_reference=No
     os.makedirs("audios", exist_ok=True)
 
     read_texts(model_id=model_id,
-               sentence=["""Fest gemauert in der Erden,
-                         Steht die Form, aus Lehm gebrannt.
-                         Heute muss die Glocke werden!
+               sentence=["""Fest gemauert in der Erden ^
+                         Steht die Form, aus Lehm gebrannt. ^
+                         Heute muss die Glocke werden! ^
                          Frisch, Gesellen, seid zur Hand!"""],
                filename=f"audios/{version}_die_glocke.wav",
+               device=exec_device,
+               language="deu",
+               speaker_reference=speaker_reference)
+
+def vergissmeinnicht(version, model_id="Meta", exec_device="cpu", speaker_reference=None):
+    os.makedirs("audios", exist_ok=True)
+
+    read_texts(model_id=model_id,
+               sentence=["""Es blüht ein schönes Blümchen ^
+                        Auf unsrer grünen Au. ^
+                        Sein Aug' ist wie der Himmel ^
+                        So heiter und so blau."""],
+               filename=f"audios/{version}_vergissmeinnicht.wav",
                device=exec_device,
                language="deu",
                speaker_reference=speaker_reference)
@@ -97,14 +110,20 @@ if __name__ == '__main__':
 
    # merged_speaker_references = ["audios/speaker_references/" + ref for ref in os.listdir("audios/speaker_references/")]
 
-    sound_of_silence_single_utt(version="integration_test_en",
-                                model_id="IntegrationTest",
-                                exec_device=exec_device,
-                                #speaker_reference=merged_speaker_references
-                                )
+    # sound_of_silence_single_utt(version="integration_test_en",
+    #                             model_id="IntegrationTest",
+    #                             exec_device=exec_device,
+    #                             #speaker_reference=merged_speaker_references
+    #                             )
 
-    die_glocke(version="poetry_bl",
-               model_id="Poetry_IntegrationTest",
+    die_glocke(version="verse_boundary_test",
+               model_id="Verse_Boundary",
+               exec_device=exec_device,
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="verse_boundary_test",
+               model_id="Verse_Boundary",
                exec_device=exec_device,
                #speaker_reference=merged_speaker_references
                )

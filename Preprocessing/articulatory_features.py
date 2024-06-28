@@ -30,6 +30,7 @@ def generate_feature_lookup():
         '!': {'symbol_type': 'exclamationmark'},
         '.': {'symbol_type': 'fullstop'},
         ' ': {'symbol_type': 'word-boundary'},
+        '^': {'symbol_type': 'verse-boundary'}, # line breaks in poems
         'ɜ': {
             'symbol_type'      : 'phoneme',
             'vowel_consonant'  : 'vowel',
@@ -809,7 +810,7 @@ def get_phone_to_id():
     cannot be extracted trivially from above because sets are unordered and the IDs need to be consistent
     """
     phone_to_id = dict()
-    for index, phone in enumerate("~#?!ǃ.ɜəaðɛɪŋɔɒɾʃθʊʌʒæbʔdefghijklmnɳopɡɹrstuvwxzʀøçɐœyʏɑcɲɣʎβʝɟqɕɭɵʑʋʁɨʂɓʙɗɖχʛʟɽɢɠǂɦǁĩʍʕɻʄũɤɶõʡʈʜɱɯǀɸʘʐɰɘħɞʉɴʢѵ"):
+    for index, phone in enumerate("~#?!ǃ.ɜəaðɛɪŋɔɒɾʃθʊʌʒæbʔdefghijklmnɳopɡɹrstuvwxzʀøçɐœyʏɑcɲɣʎβʝɟqɕɭɵʑʋʁɨʂɓʙɗɖχʛʟɽɢɠǂɦǁĩʍʕɻʄũɤɶõʡʈʜɱɯǀɸʘʐɰɘħɞʉɴʢѵ^"):
         phone_to_id[phone] = index
     return phone_to_id
 
@@ -898,6 +899,9 @@ def get_feature_to_index_lookup():
         # TYPE
         "unvoiced"           : 60,
         "voiced"             : 61,
+
+        #Poetry NON-SPEECH MARKERS
+        "verse-boundary"     : 62
     }
 
 

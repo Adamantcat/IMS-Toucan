@@ -549,7 +549,7 @@ class ArticulatoryCombinedTextFrontend:
         if self.phonemizer == "espeak":
             try:
                 self.phonemizer_backend = EspeakBackend(language=self.g2p_lang,
-                                                        punctuation_marks=';:,.!?¡¿—…"«»“”~/。【】、‥،؟“”؛',
+                                                        punctuation_marks=';:,.!?¡¿—…"«»“”~/。【】、‥،؟“”؛^',
                                                         preserve_punctuation=True,
                                                         language_switch='remove-flags',
                                                         with_stress=self.use_stress)
@@ -831,6 +831,7 @@ class ArticulatoryCombinedTextFrontend:
             ("…", "."),
             (":", "~"),
             (";", "~"),
+            ("^", "^~"), # a verse boundary should be follwed by a pause symbol
             (",", "~")  # make sure this remains the final one when adding new ones
         ]
         unsupported_ipa_characters = {'̹', '̙', '̞', '̯', '̤', '̪', '̩', '̠', '̟', 'ꜜ',
@@ -966,7 +967,7 @@ if __name__ == '__main__':
 
     tf = ArticulatoryCombinedTextFrontend(language="deu")
     tf.string_to_tensor("Alles klar, jetzt testen wir einen deutschen Satz. Ich hoffe es gibt nicht mehr viele unspezifizierte Phoneme.", view=True)
-
+    
     tf = ArticulatoryCombinedTextFrontend(language="cmn")
     tf.string_to_tensor("这是一个复杂的句子，它甚至包含一个停顿。", view=True)
     tf.string_to_tensor("李绅 《悯农》 锄禾日当午， 汗滴禾下土。 谁知盘中餐， 粒粒皆辛苦。", view=True)
