@@ -18,12 +18,15 @@ from TrainingPipelines.ToucanTTS_Nancy import run as nancy
 from TrainingPipelines.finetuning_example_multilingual import run as fine_tuning_example_multilingual
 from TrainingPipelines.finetuning_example_simple import run as fine_tuning_example_simple
 
+from TrainingPipelines.ToucanTTS_Poetry_IntegrationTest import run as poetry_integration_test
+
 pipeline_dict = {
     # the finetuning example
     "finetuning_example_simple"      : fine_tuning_example_simple,
     "finetuning_example_multilingual": fine_tuning_example_multilingual,
     # integration tests
     "tt_it"                          : tt_integration_test,
+    "poetry_it"                      : poetry_integration_test,
     # regular ToucanTTS pipelines
     "nancy"                          : nancy,
     "mls"                            : mls,
