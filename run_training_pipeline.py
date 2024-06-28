@@ -19,6 +19,7 @@ from TrainingPipelines.finetuning_example_multilingual import run as fine_tuning
 from TrainingPipelines.finetuning_example_simple import run as fine_tuning_example_simple
 
 from TrainingPipelines.ToucanTTS_Poetry_IntegrationTest import run as poetry_integration_test
+from TrainingPipelines.ToucanTTS_German import run as german
 
 pipeline_dict = {
     # the finetuning example
@@ -29,6 +30,7 @@ pipeline_dict = {
     "poetry_it"                      : poetry_integration_test,
     # regular ToucanTTS pipelines
     "nancy"                          : nancy,
+    "german"                         : german,
     "mls"                            : mls,
     "nancystoch"                     : nancystoch,
     "meta"                           : meta,
