@@ -164,13 +164,14 @@ class TTSDataset(Dataset):
                                   durations=cached_duration.unsqueeze(0),
                                   durations_lengths=torch.LongTensor([len(cached_duration)]))[0].squeeze(0).cpu()
             
-            cached_vad = vad_classifier.predict_emotions([decoded_wave])[0]
+            cached_vad = vad_classifier.predict_emotions([decoded_wave])[0] # vad takes a list of wavs as input and outputs a list of [arousal, dominance, valence]
             # print(cached_vad)
 
-            tempo_1, beats_1, cumscore_1 = Beat.calculate_beat_stats(decoded_wave, sr=16000, tightness_score=1, onset_type="onsetstrength", start_bpm=120)
+            #print(decoded_wave.shape)
+            tempo_1, beats_1, cumscore_1 = Beat.calculate_beat_stats(decoded_wave.cpu().numpy().astype(np.double), sr=16000, tightness_score=1, onset_type="onsetstrength", start_bpm=120)
             beat_score_1 = {np.max(cumscore_1) / len(beats_1)}
 
-            tempo_1000, beats_1000, cumscore_1000 = Beat.calculate_beat_stats(decoded_wave, 16000, tightness_score=1000, onset_type="onsetstrength", start_bpm=120)
+            tempo_1000, beats_1000, cumscore_1000 = Beat.calculate_beat_stats(decoded_wave.cpu().numpy().astype(np.double), 16000, tightness_score=1000, onset_type="onsetstrength", start_bpm=120)
             beat_score_1000 = {np.max(cumscore_1000) / len(beats_1000)}
 
             cached_beat = beat_score_1 - beat_score_1000

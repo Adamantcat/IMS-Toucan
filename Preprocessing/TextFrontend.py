@@ -831,7 +831,7 @@ class ArticulatoryCombinedTextFrontend:
             ("…", "."),
             (":", "~"),
             (";", "~"),
-            ("^", "^~"), # a verse boundary should be follwed by a pause symbol
+            ("^", "~^"), # a verse boundary should be preceded by a pause symbol
             (",", "~")  # make sure this remains the final one when adding new ones
         ]
         unsupported_ipa_characters = {'̹', '̙', '̞', '̯', '̤', '̪', '̩', '̠', '̟', 'ꜜ',
