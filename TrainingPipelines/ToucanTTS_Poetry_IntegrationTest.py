@@ -36,9 +36,9 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
         rank = 0
 
     train_set = prepare_tts_corpus(transcript_dict=build_path_to_transcript_dict_poetry(),
-                                   corpus_dir=os.path.join(PREPROCESSING_DIR, "PoetryIntegrationTest"),
+                                   corpus_dir=os.path.join(PREPROCESSING_DIR, "Test"),
                                    lang="deu",
-                                   fine_tune_aligner=True,
+                                   fine_tune_aligner=False,
                                    save_imgs=True,
                                    gpu_count=gpu_count,
                                    rank=rank)

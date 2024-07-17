@@ -15,6 +15,9 @@ from Preprocessing.EnCodecAudioPreprocessor import CodecAudioPreprocessor
 from Preprocessing.TextFrontend import get_language_id
 from Preprocessing.articulatory_features import get_feature_to_index_lookup
 from Utility.utils import remove_elements
+from Utility.VadClassifier import VADClassifier
+from Utility import Beat
+import numpy as np
 
 
 class TTSDataset(Dataset):
@@ -26,7 +29,7 @@ class TTSDataset(Dataset):
                  lang,
                  loading_processes=os.cpu_count() if os.cpu_count() is not None else 10,
                  min_len_in_seconds=1,
-                 max_len_in_seconds=15,
+                 max_len_in_seconds=30,
                  device=torch.device("cpu"),
                  rebuild_cache=False,
                  ctc_selection=True,
@@ -124,6 +127,9 @@ class TTSDataset(Dataset):
         energy_calc = EnergyCalculator(fs=16000).to(device)
         self.dc = DurationCalculator()
         vis_dir = os.path.join(cache_dir, "duration_vis")
+
+        vad_classifier = VADClassifier()
+
         if save_imgs:
             os.makedirs(os.path.join(vis_dir, "post_clean"), exist_ok=True)
             if annotate_silences:
@@ -157,6 +163,18 @@ class TTSDataset(Dataset):
                                   text=text,
                                   durations=cached_duration.unsqueeze(0),
                                   durations_lengths=torch.LongTensor([len(cached_duration)]))[0].squeeze(0).cpu()
+            
+            cached_vad = vad_classifier.predict_emotions([decoded_wave])[0]
+            # print(cached_vad)
+
+            tempo_1, beats_1, cumscore_1 = Beat.calculate_beat_stats(decoded_wave, sr=16000, tightness_score=1, onset_type="onsetstrength", start_bpm=120)
+            beat_score_1 = {np.max(cumscore_1) / len(beats_1)}
+
+            tempo_1000, beats_1000, cumscore_1000 = Beat.calculate_beat_stats(decoded_wave, 16000, tightness_score=1000, onset_type="onsetstrength", start_bpm=120)
+            beat_score_1000 = {np.max(cumscore_1000) / len(beats_1000)}
+
+            cached_beat = beat_score_1 - beat_score_1000
+            print("beat score: ", cached_beat)
 
             self.datapoints.append([text,  # text tensor
                                     torch.LongTensor([len(text)]),  # length of text tensor
@@ -166,7 +184,9 @@ class TTSDataset(Dataset):
                                     cached_energy.float(),  # energy
                                     cached_pitch.float(),  # pitch
                                     speaker_embeddings[index],  # speaker embedding,
-                                    filepaths[index]  # path to the associated original raw audio file
+                                    filepaths[index],  # path to the associated original raw audio file,
+                                    cached_vad,  # [arousal, dominance, valence]
+                                    cached_beat
                                     ])
             self.ctc_losses.append(ctc_loss)
 
@@ -285,7 +305,9 @@ class TTSDataset(Dataset):
                self.datapoints[index][6], \
                None, \
                self.language_id, \
-               self.datapoints[index][7]
+               self.datapoints[index][7], \
+               self.datapoints[index][9], \
+               self.datapoints[index][10]
 
     def __len__(self):
         return len(self.datapoints)

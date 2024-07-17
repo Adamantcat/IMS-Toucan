@@ -65,7 +65,7 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
                                        rank=rank))
     
     datasets.append(prepare_tts_corpus(transcript_dict=build_path_to_transcript_dict_hokus(),
-                                       corpus_dir=os.path.join(PREPROCESSING_DIR, "hohus"),
+                                       corpus_dir=os.path.join(PREPROCESSING_DIR, "hokus"),
                                        lang="deu",
                                        gpu_count=gpu_count,
                                        rank=rank))
