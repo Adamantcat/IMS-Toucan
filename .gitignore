@@ -17,6 +17,7 @@ vis/
 Utility/storage_config.py
 Preprocessing/multilinguality/distance_datasets
 wandb/
+vis/
 
 
 *_graph

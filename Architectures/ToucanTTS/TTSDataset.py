@@ -169,7 +169,7 @@ class TTSDataset(Dataset):
 
             #print(decoded_wave.shape)
             tempo_1, beats_1, cumscore_1 = Beat.calculate_beat_stats(decoded_wave.cpu().numpy().astype(np.double), sr=16000, tightness_score=1, onset_type="onsetstrength", start_bpm=120)
-            beat_score_1 = {np.max(cumscore_1) / len(beats_1)}
+            beat_score_1 = np.max(cumscore_1) / len(beats_1)
 
             tempo_1000, beats_1000, cumscore_1000 = Beat.calculate_beat_stats(decoded_wave.cpu().numpy().astype(np.double), 16000, tightness_score=1000, onset_type="onsetstrength", start_bpm=120)
             beat_score_1000 = np.max(cumscore_1000) / len(beats_1000)
