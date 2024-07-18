@@ -866,6 +866,7 @@ class ArticulatoryCombinedTextFrontend:
         for replacement in replacements:
             phoneme_string = phoneme_string.replace(replacement[0], replacement[1])
         phones = re.sub("~+", "~", phoneme_string)
+        phones = re.sub("~\s+~", "~", phoneme_string)
         phones = re.sub(r"\s+", " ", phones)
         phones = re.sub(r"\.+", ".", phones)
         phones = phones.lstrip("~").rstrip("~")

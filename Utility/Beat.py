@@ -646,3 +646,8 @@ if __name__ == '__main__':
             tempo, beats, cumscore = calculate_beat_stats(y, sr, tightness_score, onset_type, start_bpm=120)
                 # Calculate and print statistics
             print(f"tightness_score: {tightness_score}, Tempo: {tempo}, Cumulative Score / Length: {np.max(cumscore) / len(beats)}")
+    
+    tempo_1, beats_1, cumscore_1 = calculate_beat_stats(y, sr, 1, onset_type, start_bpm=120)
+    score_1 = np.max(cumscore_1) / len(beats_1)
+    print(tempo_1, beats_1, cumscore_1)
+    print(score_1)
