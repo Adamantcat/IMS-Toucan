@@ -2,6 +2,7 @@ import torch
 from torch.nn import Linear
 from torch.nn import Sequential
 from torch.nn import Tanh
+from torchvision.ops import SqueezeExcitation
 
 from Architectures.GeneralLayers.ConditionalLayerNorm import AdaIN1d
 from Architectures.GeneralLayers.ConditionalLayerNorm import ConditionalLayerNorm
@@ -101,6 +102,8 @@ class ToucanTTS(torch.nn.Module):
                  utt_embed_dim=192,  # 192 dim speaker embedding + 16 dim prosody embedding optionally (see older version, this one doesn't use the prosody embedding)
                  lang_embs=8000,
                  lang_emb_size=16,
+                 arousal_embed_dim=256,
+                 rhythm_embed_dim=256,
                  integrate_language_embedding_into_encoder_out=True,
                  embedding_integration="AdaIN",  # ["AdaIN" | "ConditionalLayerNorm" | "ConcatProject"]
                  ):
@@ -151,7 +154,9 @@ class ToucanTTS(torch.nn.Module):
             "glow_kernel_size"                             : glow_kernel_size,
             "glow_blocks"                                  : glow_blocks,
             "glow_layers"                                  : glow_layers,
-            "integrate_language_embedding_into_encoder_out": integrate_language_embedding_into_encoder_out
+            "integrate_language_embedding_into_encoder_out": integrate_language_embedding_into_encoder_out,
+            "arousal_emb_dim"                              : arousal_embed_dim,
+            "rhythm_emb_dim"                               : rhythm_embed_dim
         }
 
         self.input_feature_dimensions = input_feature_dimensions
@@ -161,6 +166,8 @@ class ToucanTTS(torch.nn.Module):
         self.multispeaker_model = utt_embed_dim is not None
         self.integrate_language_embedding_into_encoder_out = integrate_language_embedding_into_encoder_out
         self.use_conditional_layernorm_embedding_integration = embedding_integration in ["AdaIN", "ConditionalLayerNorm"]
+        self.use_arousal_embed = arousal_embed_dim is not None
+        self.use_rhythm_embed = rhythm_embed_dim is not None
 
         articulatory_feature_embedding = Sequential(Linear(input_feature_dimensions, 100), Tanh(), Linear(100, attention_dimension))
         self.encoder = Conformer(conformer_type="encoder",
@@ -192,6 +199,18 @@ class ToucanTTS(torch.nn.Module):
                 self.language_embedding_infusion = ConditionalLayerNorm(speaker_embedding_dim=lang_emb_size, hidden_dim=attention_dimension)
             else:
                 self.language_embedding_infusion = torch.nn.Linear(attention_dimension + lang_emb_size, attention_dimension)
+        
+        if self.use_arousal_embed:
+            self.aroual_emebdding = torch.nn.Linear(arousal_embed_dim, 256)
+
+        if self.use_rhythm_embed:
+            self.rythm_emebdding = torch.nn.Linear(rhythm_embed_dim, 256)
+
+        if self.use_arousal_embed and self.use_rhythm_embed:
+            self.squeeze_excitation = SqueezeExcitation(arousal_embed_dim + rhythm_embed_dim, 256)
+        
+        self.style_embbeding_infusion = AdaIN1d(style_dim=256, num_features=attention_dimension)
+
 
         self.duration_predictor = DurationPredictor(idim=attention_dimension, n_layers=duration_predictor_layers,
                                                     n_chans=attention_dimension,
