@@ -1,6 +1,7 @@
 .idea/
 tensorboard_logs/
 Corpora/
+Corpora_old/
 Models/
 audios/
 Preprocessing/glottolog/

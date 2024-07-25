@@ -29,8 +29,10 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
 
     if gpu_count > 1:
         rank = int(os.environ["LOCAL_RANK"])
+        master_addr = (os.environ["MASTER_ADDR"])
         torch.cuda.set_device(rank)
-        torch.distributed.init_process_group(backend="nccl")
+        # torch.distributed.init_process_group(backend="nccl")
+        torch.distributed.init_process_group(backend="nccl", init_method=f'tcp://141.58.127.129:23457', rank=rank, world_size=4)
     else:
         rank = 0
 
