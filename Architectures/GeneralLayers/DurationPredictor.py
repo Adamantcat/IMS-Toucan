@@ -38,6 +38,7 @@ class DurationPredictor(torch.nn.Module):
                  dropout_rate=0.1,
                  offset=1.0,
                  utt_embed_dim=None,
+                 style_embed_dim=None,
                  embedding_integration="AdaIN"):
         """
         Initialize duration predictor module.
@@ -57,34 +58,49 @@ class DurationPredictor(torch.nn.Module):
         self.dropouts = torch.nn.ModuleList()
         self.norms = torch.nn.ModuleList()
         self.embedding_projections = torch.nn.ModuleList()
+        self.style_embedding_projections = torch.nn.ModuleList()
         self.utt_embed_dim = utt_embed_dim
+        self.style_embed_dim = style_embed_dim
         self.use_conditional_layernorm_embedding_integration = embedding_integration in ["AdaIN", "ConditionalLayerNorm"]
 
         for idx in range(n_layers):
-            if utt_embed_dim is not None:
-                if embedding_integration == "AdaIN":
-                    self.embedding_projections += [AdaIN1d(style_dim=utt_embed_dim, num_features=idim)]
-                elif embedding_integration == "ConditionalLayerNorm":
-                    self.embedding_projections += [ConditionalLayerNorm(speaker_embedding_dim=utt_embed_dim, hidden_dim=idim)]
-                else:
-                    self.embedding_projections += [torch.nn.Linear(utt_embed_dim + idim, idim)]
-            else:
-                self.embedding_projections += [lambda x: x]
+            # print("Duration Predictor utt_embed_dim: ", self.utt_embed_dim)
+            # print("Duration Predictor style_embed_dim: ", self.style_embed_dim)
+            if utt_embed_dim is not None or style_embed_dim is not None:
+
+                if utt_embed_dim is not None:
+                    if embedding_integration == "AdaIN":
+                        self.embedding_projections += [AdaIN1d(style_dim=utt_embed_dim, num_features=idim)]
+                    elif embedding_integration == "ConditionalLayerNorm":
+                        self.embedding_projections += [ConditionalLayerNorm(speaker_embedding_dim=utt_embed_dim, hidden_dim=idim)]
+                    else:
+                        self.embedding_projections += [torch.nn.Linear(utt_embed_dim + idim, idim)]
+
+                if style_embed_dim is not None:
+                    self.style_embedding_projections += [AdaIN1d(style_dim=style_embed_dim, num_features=idim)]
+
+            # else:
+            #     self.embedding_projections += [lambda x: x]
             in_chans = idim if idx == 0 else n_chans
             self.conv += [torch.nn.Sequential(torch.nn.Conv1d(in_chans, n_chans, kernel_size, stride=1, padding=(kernel_size - 1) // 2, ),
                                               torch.nn.ReLU())]
             self.norms += [LayerNorm(n_chans, dim=1)]
             self.dropouts += [torch.nn.Dropout(dropout_rate)]
 
+            
+            
+
         self.linear = torch.nn.Linear(n_chans, 1)
 
-    def _forward(self, xs, x_masks=None, is_inference=False, utt_embed=None):
+    def _forward(self, xs, x_masks=None, is_inference=False, utt_embed=None, style_embed=None):
         xs = xs.transpose(1, -1)  # (B, idim, Tmax)
 
-        for f, c, d, p in zip(self.conv, self.norms, self.dropouts, self.embedding_projections):
+        for f, c, d, p, sp in zip(self.conv, self.norms, self.dropouts, self.embedding_projections, self.style_embedding_projections):
             xs = f(xs)  # (B, C, Tmax)
             if self.utt_embed_dim is not None:
                 xs = integrate_with_utt_embed(hs=xs.transpose(1, 2), utt_embeddings=utt_embed, projection=p, embedding_training=self.use_conditional_layernorm_embedding_integration).transpose(1, 2)
+            if self.style_embed_dim is not None:
+                xs = integrate_with_utt_embed(hs=xs.transpose(1, 2), utt_embeddings=style_embed, projection=sp, embedding_training=True).transpose(1, 2)
             xs = c(xs)
             xs = d(xs)
 
@@ -99,7 +115,7 @@ class DurationPredictor(torch.nn.Module):
 
         return xs
 
-    def forward(self, xs, padding_mask=None, utt_embed=None):
+    def forward(self, xs, padding_mask=None, utt_embed=None, style_embed=None):
         """
         Calculate forward propagation.
 
@@ -112,9 +128,9 @@ class DurationPredictor(torch.nn.Module):
             Tensor: Batch of predicted durations in log domain (B, Tmax).
 
         """
-        return self._forward(xs, padding_mask, False, utt_embed=utt_embed)
+        return self._forward(xs, padding_mask, False, utt_embed=utt_embed, style_embed=style_embed)
 
-    def inference(self, xs, padding_mask=None, utt_embed=None):
+    def inference(self, xs, padding_mask=None, utt_embed=None, style_embed=None):
         """
         Inference duration.
 
@@ -127,7 +143,7 @@ class DurationPredictor(torch.nn.Module):
             LongTensor: Batch of predicted durations in linear domain (B, Tmax).
 
         """
-        return self._forward(xs, padding_mask, True, utt_embed=utt_embed)
+        return self._forward(xs, padding_mask, True, utt_embed=utt_embed, style_embed=style_embed)
 
 
 class DurationPredictorLoss(torch.nn.Module):

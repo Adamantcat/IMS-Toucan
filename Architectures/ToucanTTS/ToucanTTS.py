@@ -102,8 +102,9 @@ class ToucanTTS(torch.nn.Module):
                  utt_embed_dim=192,  # 192 dim speaker embedding + 16 dim prosody embedding optionally (see older version, this one doesn't use the prosody embedding)
                  lang_embs=8000,
                  lang_emb_size=16,
-                 arousal_embed_dim=256,
-                 rhythm_embed_dim=256,
+                #  arousal_embed_dim=256,
+                #  rhythm_embed_dim=256,
+                 style_embed_dim=256,
                  integrate_language_embedding_into_encoder_out=True,
                  embedding_integration="AdaIN",  # ["AdaIN" | "ConditionalLayerNorm" | "ConcatProject"]
                  ):
@@ -155,8 +156,9 @@ class ToucanTTS(torch.nn.Module):
             "glow_blocks"                                  : glow_blocks,
             "glow_layers"                                  : glow_layers,
             "integrate_language_embedding_into_encoder_out": integrate_language_embedding_into_encoder_out,
-            "arousal_emb_dim"                              : arousal_embed_dim,
-            "rhythm_emb_dim"                               : rhythm_embed_dim
+            # "arousal_emb_dim"                              : arousal_embed_dim,
+            # "rhythm_emb_dim"                               : rhythm_embed_dim,
+            "style_embed_dim"                              : style_embed_dim
         }
 
         self.input_feature_dimensions = input_feature_dimensions
@@ -166,10 +168,33 @@ class ToucanTTS(torch.nn.Module):
         self.multispeaker_model = utt_embed_dim is not None
         self.integrate_language_embedding_into_encoder_out = integrate_language_embedding_into_encoder_out
         self.use_conditional_layernorm_embedding_integration = embedding_integration in ["AdaIN", "ConditionalLayerNorm"]
-        self.use_arousal_embed = arousal_embed_dim is not None
-        self.use_rhythm_embed = rhythm_embed_dim is not None
+        # self.use_arousal_embed = arousal_embed_dim is not None
+        # self.use_rhythm_embed = rhythm_embed_dim is not None
+        self.use_style_embed = style_embed_dim is not None
 
         articulatory_feature_embedding = Sequential(Linear(input_feature_dimensions, 100), Tanh(), Linear(100, attention_dimension))
+
+         # if self.use_arousal_embed and self.use_style_embed:
+        #     self.aroual_emebdding = torch.nn.Linear(arousal_embed_dim, 256)
+
+        # if self.use_rhythm_embed and self.use_style_embed:
+        #     self.rythm_emebdding = torch.nn.Linear(rhythm_embed_dim, 256)
+
+        # if self.use_arousal_embed and self.use_rhythm_embed:
+        #     self.squeeze_excitation = SqueezeExcitation(arousal_embed_dim + rhythm_embed_dim, 256)
+        
+
+        if self.use_style_embed:
+            self.style_embed_dim = style_embed_dim
+            self.aroual_emebdding = torch.nn.Linear(1, style_embed_dim)
+            self.rythm_emebdding = torch.nn.Linear(1, style_embed_dim)
+            # self.squeeze_excitation = SqueezeExcitation(2 * style_embed_dim, 256)
+            self.style_embedding_projection = torch.nn.Linear(2 * style_embed_dim, 256)                                          
+            self.style_embbeding_infusion = AdaIN1d(style_dim=256, num_features=attention_dimension)
+        # print("ToucanTTS style_embed_dim: ", style_embed_dim)
+        # print("ToucanTTS utt_embed_dim: ", utt_embed_dim)
+
+
         self.encoder = Conformer(conformer_type="encoder",
                                  attention_dim=attention_dimension,
                                  attention_heads=attention_heads,
@@ -187,6 +212,7 @@ class ToucanTTS(torch.nn.Module):
                                  cnn_module_kernel=conformer_encoder_kernel_size,
                                  zero_triu=False,
                                  utt_embed=utt_embed_dim,
+                                 style_embed=style_embed_dim,
                                  lang_embs=lang_embs,
                                  lang_emb_size=lang_emb_size,
                                  use_output_norm=True,
@@ -200,23 +226,13 @@ class ToucanTTS(torch.nn.Module):
             else:
                 self.language_embedding_infusion = torch.nn.Linear(attention_dimension + lang_emb_size, attention_dimension)
         
-        if self.use_arousal_embed:
-            self.aroual_emebdding = torch.nn.Linear(arousal_embed_dim, 256)
-
-        if self.use_rhythm_embed:
-            self.rythm_emebdding = torch.nn.Linear(rhythm_embed_dim, 256)
-
-        if self.use_arousal_embed and self.use_rhythm_embed:
-            self.squeeze_excitation = SqueezeExcitation(arousal_embed_dim + rhythm_embed_dim, 256)
-        
-        self.style_embbeding_infusion = AdaIN1d(style_dim=256, num_features=attention_dimension)
-
 
         self.duration_predictor = DurationPredictor(idim=attention_dimension, n_layers=duration_predictor_layers,
                                                     n_chans=attention_dimension,
                                                     kernel_size=duration_predictor_kernel_size,
                                                     dropout_rate=duration_predictor_dropout_rate,
                                                     utt_embed_dim=utt_embed_dim,
+                                                    style_embed_dim=style_embed_dim,
                                                     embedding_integration=embedding_integration)
 
         self.pitch_predictor = VariancePredictor(idim=attention_dimension, n_layers=pitch_predictor_layers,
@@ -224,6 +240,7 @@ class ToucanTTS(torch.nn.Module):
                                                  kernel_size=pitch_predictor_kernel_size,
                                                  dropout_rate=pitch_predictor_dropout,
                                                  utt_embed_dim=utt_embed_dim,
+                                                 style_embed_dim=style_embed_dim,
                                                  embedding_integration=embedding_integration)
 
         self.energy_predictor = VariancePredictor(idim=attention_dimension, n_layers=energy_predictor_layers,
@@ -231,6 +248,7 @@ class ToucanTTS(torch.nn.Module):
                                                   kernel_size=energy_predictor_kernel_size,
                                                   dropout_rate=energy_predictor_dropout,
                                                   utt_embed_dim=utt_embed_dim,
+                                                  style_embed_dim=style_embed_dim,
                                                   embedding_integration=embedding_integration)
 
         self.pitch_embed = Sequential(torch.nn.Conv1d(in_channels=1,
@@ -262,6 +280,7 @@ class ToucanTTS(torch.nn.Module):
                                  cnn_module_kernel=conformer_decoder_kernel_size,
                                  use_output_norm=embedding_integration not in ["AdaIN", "ConditionalLayerNorm"],
                                  utt_embed=utt_embed_dim,
+                                 style_embed=style_embed_dim,
                                  embedding_integration=embedding_integration)
 
         # due to the nature of the residual vector quantization, we have to predict the codebooks in a hierarchical way.
@@ -299,6 +318,8 @@ class ToucanTTS(torch.nn.Module):
                 gold_pitch,
                 gold_energy,
                 utterance_embedding,
+                arousal,
+                rhythm,
                 return_feats=False,
                 lang_ids=None,
                 run_glow=True
@@ -329,6 +350,8 @@ class ToucanTTS(torch.nn.Module):
                                          gold_pitch=gold_pitch,
                                          gold_energy=gold_energy,
                                          utterance_embedding=utterance_embedding,
+                                         arousal=arousal,
+                                         rhythm=rhythm,
                                          is_inference=False,
                                          lang_ids=lang_ids,
                                          run_glow=run_glow)
@@ -359,6 +382,8 @@ class ToucanTTS(torch.nn.Module):
                  gold_energy=None,
                  is_inference=False,
                  utterance_embedding=None,
+                 arousal=None,
+                 rhythm=None,
                  lang_ids=None,
                  run_glow=False):
 
@@ -369,21 +394,55 @@ class ToucanTTS(torch.nn.Module):
             utterance_embedding = None
         else:
             utterance_embedding = torch.nn.functional.normalize(utterance_embedding)
+            # print("utt embed: ", utterance_embedding.shape)
+
+        if not self.use_style_embed:
+            style_embedding = None
+        else:    
+            if arousal is not None:
+                embedded_arousal = self.aroual_emebdding(arousal)
+            if rhythm is not None:
+                embedded_rhythm = self.rythm_emebdding(rhythm)
+            
+            if arousal is not None and rhythm is not None:
+                # print("ToucanTTS arousal embed shape: ", embedded_arousal.shape)
+                # print("ToucanTTS rhythm embed shape: ", embedded_rhythm.shape)
+                style_embedding = torch.cat([embedded_arousal, embedded_rhythm],dim=-1)
+                # print("ToucanTTS concat embed shape: ", style_embedding.shape)
+                style_embedding = self.style_embedding_projection(style_embedding)
+                # print("after projection: ", style_embedding.shape)
+                # style_embedding = self.squeeze_excitation(style_embedding).squeeze(-1).transpose(0, 1)
+                # print("squeeze exitation: ", style_embedding.shape)
+
+                # style_embedding = self.squeeze_excitation(style_embedding.transpose(0, 1).unsqueeze(-1)).squeeze(-1).transpose(0, 1)
+
+            elif arousal is not None and rhythm is None:
+                style_embedding = embedded_arousal
+
+            elif rhythm is not None and arousal is None:
+                style_embedding = embedded_rhythm
+            else:
+                style_embedding = None # this should never happen
+
+            if is_inference:
+                style_embedding = style_embedding.unsqueeze(0)
+           # print("ToucanTTS style emedding shape: ", style_embedding.shape)
 
         # encoding the texts
         text_masks = make_non_pad_mask(text_lengths, device=text_lengths.device).unsqueeze(-2)
         padding_masks = make_pad_mask(text_lengths, device=text_lengths.device)
-        encoded_texts, _ = self.encoder(text_tensors, text_masks, utterance_embedding=utterance_embedding, lang_ids=lang_ids)
+        encoded_texts, _ = self.encoder(text_tensors, text_masks, utterance_embedding=utterance_embedding, style_embedding=style_embedding, lang_ids=lang_ids)
 
         if self.integrate_language_embedding_into_encoder_out:
             lang_embs = self.encoder.language_embedding(lang_ids).squeeze(-1)
             encoded_texts = integrate_with_utt_embed(hs=encoded_texts, utt_embeddings=lang_embs, projection=self.language_embedding_infusion, embedding_training=self.use_conditional_layernorm_embedding_integration)
 
         if is_inference:
+            # style_embedding = style_embedding.unsqueeze(0) if style_embedding is not None else None
             # predicting pitch, energy and durations
-            pitch_predictions = self.pitch_predictor(encoded_texts, padding_mask=None, utt_embed=utterance_embedding)
-            energy_predictions = self.energy_predictor(encoded_texts, padding_mask=None, utt_embed=utterance_embedding)
-            predicted_durations = self.duration_predictor.inference(encoded_texts, padding_mask=None, utt_embed=utterance_embedding)
+            pitch_predictions = self.pitch_predictor(encoded_texts, padding_mask=None, utt_embed=utterance_embedding, style_embed=style_embedding)
+            energy_predictions = self.energy_predictor(encoded_texts, padding_mask=None, utt_embed=utterance_embedding, style_embed=style_embedding)
+            predicted_durations = self.duration_predictor.inference(encoded_texts, padding_mask=None, utt_embed=utterance_embedding, style_embed=style_embedding)
 
             # modifying the predictions
             for phoneme_index, phoneme_vector in enumerate(text_tensors.squeeze(0)):
@@ -399,9 +458,9 @@ class ToucanTTS(torch.nn.Module):
 
         else:
             # training with teacher forcing
-            pitch_predictions = self.pitch_predictor(encoded_texts.detach(), padding_mask=padding_masks.unsqueeze(-1), utt_embed=utterance_embedding)
-            energy_predictions = self.energy_predictor(encoded_texts, padding_mask=padding_masks.unsqueeze(-1), utt_embed=utterance_embedding)
-            predicted_durations = self.duration_predictor(encoded_texts, padding_mask=padding_masks, utt_embed=utterance_embedding)
+            pitch_predictions = self.pitch_predictor(encoded_texts.detach(), padding_mask=padding_masks.unsqueeze(-1), utt_embed=utterance_embedding, style_embed=style_embedding)
+            energy_predictions = self.energy_predictor(encoded_texts, padding_mask=padding_masks.unsqueeze(-1), utt_embed=utterance_embedding, style_embed=style_embedding)
+            predicted_durations = self.duration_predictor(encoded_texts, padding_mask=padding_masks, utt_embed=utterance_embedding, style_embed=style_embedding)
 
             embedded_pitch_curve = self.pitch_embed(gold_pitch.transpose(1, 2)).transpose(1, 2)
             embedded_energy_curve = self.energy_embed(gold_energy.transpose(1, 2)).transpose(1, 2)
@@ -411,7 +470,7 @@ class ToucanTTS(torch.nn.Module):
 
         # decoding spectrogram
         decoder_masks = make_non_pad_mask(speech_lengths, device=speech_lengths.device).unsqueeze(-2) if speech_lengths is not None and not is_inference else None
-        decoded_speech, _ = self.decoder(upsampled_enriched_encoded_texts, decoder_masks, utterance_embedding=utterance_embedding)
+        decoded_speech, _ = self.decoder(upsampled_enriched_encoded_texts, decoder_masks, utterance_embedding=utterance_embedding, style_embedding=style_embedding)
 
         preliminary_spectrogram = self.output_projection(decoded_speech)
 
@@ -440,6 +499,8 @@ class ToucanTTS(torch.nn.Module):
                   text,
                   speech=None,
                   utterance_embedding=None,
+                  arousal=None,
+                  rhythm=None,
                   return_duration_pitch_energy=False,
                   lang_id=None,
                   run_glow=True):
@@ -460,6 +521,7 @@ class ToucanTTS(torch.nn.Module):
         if speech is not None:
             speech_pseudobatched = speech.unsqueeze(0)
         utterance_embeddings = utterance_embedding.unsqueeze(0) if utterance_embedding is not None else None
+        
 
         outs, \
         duration_predictions, \
@@ -469,6 +531,8 @@ class ToucanTTS(torch.nn.Module):
                                            speech_pseudobatched,
                                            is_inference=True,
                                            utterance_embedding=utterance_embeddings,
+                                           arousal=arousal,
+                                           rhythm=rhythm,
                                            lang_ids=lang_id,
                                            run_glow=run_glow)  # (1, L, odim)
         self.train()
@@ -495,9 +559,13 @@ if __name__ == '__main__':
     print(" TESTING INFERENCE ")
     dummy_text_batch = torch.randint(low=0, high=2, size=[12, 63]).float()  # [Sequence Length, Features per Phone]
     dummy_utterance_embed = torch.randn([192])  # [Dimensions of Speaker Embedding]
+    dummy_arousal = torch.randint(low=0, high=1, size=[1]).float()
+    dummy_rhythm = torch.randint(low=0, high=5, size=[1]).float()
     dummy_language_id = torch.LongTensor([2])
     print(model.inference(dummy_text_batch,
                           utterance_embedding=dummy_utterance_embed,
+                          arousal=dummy_arousal,
+                          rhythm=dummy_rhythm,
                           lang_id=dummy_language_id).shape)
 
     print(" TESTING TRAINING ")
@@ -515,6 +583,9 @@ if __name__ == '__main__':
     dummy_utterance_embed = torch.randn([3, 192])  # [Batch, Dimensions of Speaker Embedding]
     dummy_language_id = torch.LongTensor([5, 3, 2])
 
+    dummy_arousal = torch.randint(low=0, high=1, size=[3, 1]).float()
+    dummy_rhythm = torch.randint(low=0, high=5, size=[3, 1]).float()
+
     ce, fl, dl, pl, el = model(dummy_text_batch,
                                dummy_text_lens,
                                dummy_speech_batch,
@@ -523,6 +594,8 @@ if __name__ == '__main__':
                                dummy_pitch,
                                dummy_energy,
                                utterance_embedding=dummy_utterance_embed,
+                               arousal=dummy_arousal,
+                               rhythm=dummy_rhythm,
                                lang_ids=dummy_language_id)
 
     loss = ce + dl + pl + el

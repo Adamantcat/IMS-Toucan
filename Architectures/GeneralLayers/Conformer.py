@@ -45,7 +45,7 @@ class Conformer(torch.nn.Module):
 
     def __init__(self, conformer_type, attention_dim=256, attention_heads=4, linear_units=2048, num_blocks=6, dropout_rate=0.1, positional_dropout_rate=0.1,
                  attention_dropout_rate=0.0, input_layer="conv2d", normalize_before=True, concat_after=False, positionwise_conv_kernel_size=1,
-                 macaron_style=False, use_cnn_module=False, cnn_module_kernel=31, zero_triu=False, utt_embed=None, lang_embs=None, lang_emb_size=16, use_output_norm=True, embedding_integration="AdaIN"):
+                 macaron_style=False, use_cnn_module=False, cnn_module_kernel=31, zero_triu=False, utt_embed=None, style_embed=None, lang_embs=None, lang_emb_size=16, use_output_norm=True, embedding_integration="AdaIN"):
         super(Conformer, self).__init__()
 
         activation = Swish()
@@ -65,6 +65,7 @@ class Conformer(torch.nn.Module):
         if self.use_output_norm:
             self.output_norm = LayerNorm(attention_dim)
         self.utt_embed = utt_embed
+        self.style_embed = style_embed
         self.conformer_type = conformer_type
         self.use_conditional_layernorm_embedding_integration = embedding_integration in ["AdaIN", "ConditionalLayerNorm"]
         if utt_embed is not None:
@@ -82,6 +83,17 @@ class Conformer(torch.nn.Module):
                     self.decoder_embedding_projections = repeat(num_blocks, lambda lnum: ConditionalLayerNorm(speaker_embedding_dim=utt_embed, hidden_dim=attention_dim))
                 else:
                     self.decoder_embedding_projections = repeat(num_blocks, lambda lnum: torch.nn.Linear(attention_dim + utt_embed, attention_dim))
+        if style_embed is not None:
+            if conformer_type == "encoder":  # the encoder gets an additional conditioning signal added to its output
+                if embedding_integration == "AdaIN":
+                    self.encoder_style_embedding_projection = AdaIN1d(style_dim=style_embed, num_features=attention_dim)
+                else:
+                    self.encoder_style_embedding_projection = torch.nn.Linear(attention_dim + style_embed, attention_dim)
+            else:
+                if embedding_integration == "AdaIN":
+                    self.decoder_style_embedding_projections = repeat(num_blocks, lambda lnum: AdaIN1d(style_dim=style_embed, num_features=attention_dim))
+                else:
+                    self.decoder_style_embedding_projections = repeat(num_blocks, lambda lnum: torch.nn.Linear(attention_dim + style_embed, attention_dim))
         if lang_embs is not None:
             self.language_embedding = torch.nn.Embedding(num_embeddings=lang_embs, embedding_dim=lang_emb_size)
             self.language_embedding_projection = torch.nn.Linear(lang_emb_size, attention_dim)
@@ -108,6 +120,7 @@ class Conformer(torch.nn.Module):
                 xs,
                 masks,
                 utterance_embedding=None,
+                style_embedding=None,
                 lang_ids=None):
         """
         Encode input sequence.
@@ -142,17 +155,38 @@ class Conformer(torch.nn.Module):
                     xs = (x, pos_emb)
                 else:
                     if self.conformer_type != "encoder":
-                        xs = integrate_with_utt_embed(hs=xs, utt_embeddings=utterance_embedding, projection=self.decoder_embedding_projections[encoder_index], embedding_training=self.use_conditional_layernorm_embedding_integration)
+                        xs = integrate_with_utt_embed(hs=xs, utt_embeddings=utterance_embedding, projection=self.decoder_embedding_projections[encoder_index], embedding_training=self.use_conditional_layernorm_embedding_integration)     
+            if self.style_embed:
+                if isinstance(xs, tuple):
+                    x, pos_emb = xs[0], xs[1]
+                    if self.conformer_type != "encoder":
+                        x = integrate_with_utt_embed(hs=x, utt_embeddings=style_embedding, projection=self.decoder_style_embedding_projections[encoder_index], embedding_training=True)
+                    xs = (x, pos_emb)
+                else:
+                    if self.conformer_type != "encoder":
+                        xs = integrate_with_utt_embed(hs=xs, utt_embeddings=style_embedding, projection=self.decoder_style_embedding_projections[encoder_index], embedding_training=True) 
             xs, masks = encoder(xs, masks)
 
         if isinstance(xs, tuple):
             xs = xs[0]
 
-        if self.use_output_norm and not (self.utt_embed and self.conformer_type == "encoder"):
+        if self.use_output_norm and not ((self.utt_embed or self.style_embed) and self.conformer_type == "encoder"):
+            # print("Conformer: use output norm and not (self.utt_embed or self.style_embed)")
             xs = self.output_norm(xs)
 
+
+        print("Conformer xs shape before: ", xs.shape)
+        # print("Conformer utt embed shape before: ", utterance_embedding.shape)
         if self.utt_embed and self.conformer_type == "encoder":
+            # print("Conformer utterance_embedding: ", utterance_embedding.shape)
             xs = integrate_with_utt_embed(hs=xs, utt_embeddings=utterance_embedding,
                                           projection=self.encoder_embedding_projection, embedding_training=self.use_conditional_layernorm_embedding_integration)
+        # print("Conformer xs shape after utt embed: ", xs.shape)
+        if self.style_embed and self.conformer_type == "encoder":
+            # print("Conformer style embedding: ", style_embedding.shape)
+            xs = integrate_with_utt_embed(hs=xs, utt_embeddings=style_embedding,
+                                          projection=self.encoder_style_embedding_projection, embedding_training=True)
+        # print("Conformer xs shape after style embed: ", xs.shape)
+        
 
         return xs, masks
