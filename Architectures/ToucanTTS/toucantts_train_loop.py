@@ -21,7 +21,7 @@ from run_weight_averaging import save_model_for_use
 
 
 def collate_and_pad(batch):
-    # text, text_len, speech, speech_len, durations, energy, pitch, utterance condition, language_id, speaker embedding
+    # text, text_len, speech, speech_len, durations, energy, pitch, utterance condition, language_id, speaker embedding, vad, rhythm
     return (pad_sequence([datapoint[0] for datapoint in batch], batch_first=True).float(),
             torch.stack([datapoint[1] for datapoint in batch]).squeeze(1),
             [datapoint[2] for datapoint in batch],
@@ -31,7 +31,9 @@ def collate_and_pad(batch):
             pad_sequence([datapoint[6] for datapoint in batch], batch_first=True),
             None,
             torch.stack([datapoint[8] for datapoint in batch]),
-            torch.stack([datapoint[9] for datapoint in batch]))
+            torch.stack([datapoint[9] for datapoint in batch]),
+            pad_sequence([torch.tensor(datapoint[10][0], dtype=torch.float32).unsqueeze(0) for datapoint in batch], batch_first=True),
+            pad_sequence([torch.tensor(datapoint[11], dtype=torch.float32).unsqueeze(0) for datapoint in batch], batch_first=True))
 
 
 def train_loop(net,
@@ -120,6 +122,8 @@ def train_loop(net,
             gold_pitch = batch[6].to(device)  # mind the switched order
             gold_energy = batch[5].to(device)  # mind the switched order
             lang_ids = batch[8].squeeze(1).to(device)
+            arousal = batch[10].to(device)
+            rhythm = batch[11].to(device)
 
             speech_batch = list()  # I wish this could be done in the collate function or in the getitem, but using DL models in multiprocessing on very large datasets causes just way too many issues.
             for speech_sample in speech_indexes:
@@ -143,6 +147,8 @@ def train_loop(net,
                 gold_pitch=gold_pitch,
                 gold_energy=gold_energy,
                 utterance_embedding=utterance_embedding,
+                arousal=arousal,
+                rhythm=rhythm,
                 lang_ids=lang_ids,
                 return_feats=False,
                 run_glow=run_glow
@@ -235,6 +241,8 @@ def train_loop(net,
                                                                             step=step_counter,
                                                                             lang=lang,
                                                                             default_emb=default_embedding,
+                                                                            default_arousal=torch.tensor(0.01, dtype=torch.float32).to(device), # somehow inference mode doesn't work with zero values
+                                                                            default_rhythm=torch.tensor(0.01, dtype=torch.float32).to(device), # somehow inference mode doesn't work with zero values
                                                                             run_glow=run_glow)
                     if use_wandb:
                         wandb.log({

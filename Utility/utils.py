@@ -67,6 +67,8 @@ def plot_progress_spec_toucantts(net,
                                  step,
                                  lang,
                                  default_emb,
+                                 default_arousal,
+                                 default_rhythm,
                                  run_glow):
     tf = ArticulatoryCombinedTextFrontend(language=lang)
     sentence = tf.get_example_sentence(lang=lang)
@@ -76,6 +78,8 @@ def plot_progress_spec_toucantts(net,
     mel, durations, pitch, energy = net.inference(text=phoneme_vector,
                                                   return_duration_pitch_energy=True,
                                                   utterance_embedding=default_emb,
+                                                  arousal=default_arousal,
+                                                  rhythm=default_rhythm,
                                                   lang_id=get_language_id(lang).to(device),
                                                   run_glow=run_glow)
 

@@ -25,7 +25,7 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
     if model_dir is not None:
         save_dir = model_dir
     else:
-        save_dir = os.path.join(MODELS_DIR, "ToucanTTS_Poetry_IntegrationTest")
+        save_dir = os.path.join(MODELS_DIR, "ToucanTTS_Poetry_StyleEmbedding")
     os.makedirs(save_dir, exist_ok=True)
 
     if gpu_count > 1:
@@ -73,7 +73,7 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
                path_to_checkpoint=resume_checkpoint,
                fine_tune=finetune,
                resume=resume,
-               steps=5000,
+               steps=20000,
                use_wandb=use_wandb,
                train_samplers=[train_sampler],
                gpu_count=gpu_count)

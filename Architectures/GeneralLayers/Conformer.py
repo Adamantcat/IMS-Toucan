@@ -175,7 +175,7 @@ class Conformer(torch.nn.Module):
             xs = self.output_norm(xs)
 
 
-        print("Conformer xs shape before: ", xs.shape)
+        # print("Conformer xs shape before: ", xs.shape)
         # print("Conformer utt embed shape before: ", utterance_embedding.shape)
         if self.utt_embed and self.conformer_type == "encoder":
             # print("Conformer utterance_embedding: ", utterance_embedding.shape)
@@ -183,7 +183,8 @@ class Conformer(torch.nn.Module):
                                           projection=self.encoder_embedding_projection, embedding_training=self.use_conditional_layernorm_embedding_integration)
         # print("Conformer xs shape after utt embed: ", xs.shape)
         if self.style_embed and self.conformer_type == "encoder":
-            # print("Conformer style embedding: ", style_embedding.shape)
+            # print("COnformer style embed: ", self.style_embed)
+            # print("Conformer style embedding: ", style_embedding.shape if style_embedding is not None else None)
             xs = integrate_with_utt_embed(hs=xs, utt_embeddings=style_embedding,
                                           projection=self.encoder_style_embedding_projection, embedding_training=True)
         # print("Conformer xs shape after style embed: ", xs.shape)

@@ -394,11 +394,12 @@ class ToucanTTS(torch.nn.Module):
             utterance_embedding = None
         else:
             utterance_embedding = torch.nn.functional.normalize(utterance_embedding)
-            # print("utt embed: ", utterance_embedding.shape)
+            # print("ToucanTTS utt embed: ", utterance_embedding.shape)
+        if arousal is None and rhythm is None:
+            self.use_style_embed = False
+            print("No values for arousal and/or rhythm provided. Can't use style embedding.")
 
-        if not self.use_style_embed:
-            style_embedding = None
-        else:    
+        if self.use_style_embed:    
             if arousal is not None:
                 embedded_arousal = self.aroual_emebdding(arousal)
             if rhythm is not None:
@@ -410,7 +411,7 @@ class ToucanTTS(torch.nn.Module):
                 style_embedding = torch.cat([embedded_arousal, embedded_rhythm],dim=-1)
                 # print("ToucanTTS concat embed shape: ", style_embedding.shape)
                 style_embedding = self.style_embedding_projection(style_embedding)
-                # print("after projection: ", style_embedding.shape)
+                # print("ToucanTTS style embedding: ", style_embedding.shape)
                 # style_embedding = self.squeeze_excitation(style_embedding).squeeze(-1).transpose(0, 1)
                 # print("squeeze exitation: ", style_embedding.shape)
 
@@ -420,13 +421,17 @@ class ToucanTTS(torch.nn.Module):
                 style_embedding = embedded_arousal
 
             elif rhythm is not None and arousal is None:
-                style_embedding = embedded_rhythm
-            else:
-                style_embedding = None # this should never happen
+                style_embedding = embedded_rhythm       
+            # if is_inference and style_embedding is not None:
+            #     style_embedding = style_embedding.unsqueeze(0)
+            
+        else:
+            style_embedding = None
+        
+        # if is_inference:
+        #     style_embedding = style_embedding.unsqueeze(0) if style_embedding is not None else None
 
-            if is_inference:
-                style_embedding = style_embedding.unsqueeze(0)
-           # print("ToucanTTS style emedding shape: ", style_embedding.shape)
+        # print("ToucanTTS style emedding shape: ", style_embedding.shape if style_embedding is not None else None)
 
         # encoding the texts
         text_masks = make_non_pad_mask(text_lengths, device=text_lengths.device).unsqueeze(-2)
@@ -438,7 +443,6 @@ class ToucanTTS(torch.nn.Module):
             encoded_texts = integrate_with_utt_embed(hs=encoded_texts, utt_embeddings=lang_embs, projection=self.language_embedding_infusion, embedding_training=self.use_conditional_layernorm_embedding_integration)
 
         if is_inference:
-            # style_embedding = style_embedding.unsqueeze(0) if style_embedding is not None else None
             # predicting pitch, energy and durations
             pitch_predictions = self.pitch_predictor(encoded_texts, padding_mask=None, utt_embed=utterance_embedding, style_embed=style_embedding)
             energy_predictions = self.energy_predictor(encoded_texts, padding_mask=None, utt_embed=utterance_embedding, style_embed=style_embedding)
@@ -521,6 +525,14 @@ class ToucanTTS(torch.nn.Module):
         if speech is not None:
             speech_pseudobatched = speech.unsqueeze(0)
         utterance_embeddings = utterance_embedding.unsqueeze(0) if utterance_embedding is not None else None
+        arousal = arousal.unsqueeze(0).unsqueeze(0) if arousal else None
+        rhythm = rhythm.unsqueeze(0).unsqueeze(0) if rhythm else None
+
+
+        # print("ToucanTTS inference arousal: ", arousal)
+        # print("ToucanTTS inference rhythm: ", rhythm)
+        # print("ToucanTTS inference utt embedding: ", utterance_embedding.shape if utterance_embedding is not None else None)
+
         
 
         outs, \
