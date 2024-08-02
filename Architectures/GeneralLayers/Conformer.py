@@ -156,7 +156,7 @@ class Conformer(torch.nn.Module):
                 else:
                     if self.conformer_type != "encoder":
                         xs = integrate_with_utt_embed(hs=xs, utt_embeddings=utterance_embedding, projection=self.decoder_embedding_projections[encoder_index], embedding_training=self.use_conditional_layernorm_embedding_integration)     
-            if self.style_embed:
+            if style_embedding is not None:
                 if isinstance(xs, tuple):
                     x, pos_emb = xs[0], xs[1]
                     if self.conformer_type != "encoder":
@@ -170,7 +170,7 @@ class Conformer(torch.nn.Module):
         if isinstance(xs, tuple):
             xs = xs[0]
 
-        if self.use_output_norm and not ((self.utt_embed or self.style_embed) and self.conformer_type == "encoder"):
+        if self.use_output_norm and not ((self.utt_embed or style_embedding) and self.conformer_type == "encoder"):
             # print("Conformer: use output norm and not (self.utt_embed or self.style_embed)")
             xs = self.output_norm(xs)
 
@@ -182,8 +182,8 @@ class Conformer(torch.nn.Module):
             xs = integrate_with_utt_embed(hs=xs, utt_embeddings=utterance_embedding,
                                           projection=self.encoder_embedding_projection, embedding_training=self.use_conditional_layernorm_embedding_integration)
         # print("Conformer xs shape after utt embed: ", xs.shape)
-        if self.style_embed and self.conformer_type == "encoder":
-            # print("COnformer style embed: ", self.style_embed)
+        if style_embedding is not None and self.conformer_type == "encoder":
+            # print("Conformer style embed: ", self.style_embed)
             # print("Conformer style embedding: ", style_embedding.shape if style_embedding is not None else None)
             xs = integrate_with_utt_embed(hs=xs, utt_embeddings=style_embedding,
                                           projection=self.encoder_style_embedding_projection, embedding_training=True)

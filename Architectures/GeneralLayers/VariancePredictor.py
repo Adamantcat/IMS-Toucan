@@ -95,7 +95,7 @@ class VariancePredictor(torch.nn.Module, ABC):
             xs = f(xs)  # (B, C, Tmax)
             if self.utt_embed_dim is not None:
                 xs = integrate_with_utt_embed(hs=xs.transpose(1, 2), utt_embeddings=utt_embed, projection=p, embedding_training=self.use_conditional_layernorm_embedding_integration).transpose(1, 2)
-            if self.style_embed_dim is not None:
+            if style_embed is not None:
                 xs = integrate_with_utt_embed(hs=xs.transpose(1, 2), utt_embeddings=style_embed, projection=sp, embedding_training=True).transpose(1, 2)
             xs = c(xs)
             xs = d(xs)

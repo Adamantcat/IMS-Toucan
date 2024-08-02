@@ -426,6 +426,7 @@ class ToucanTTS(torch.nn.Module):
             #     style_embedding = style_embedding.unsqueeze(0)
             
         else:
+            # self.use_style_embed = False
             style_embedding = None
         
         # if is_inference:

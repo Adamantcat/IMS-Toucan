@@ -128,22 +128,22 @@ if __name__ == '__main__':
     #                             #speaker_reference=merged_speaker_references
     #                             )
 
-    # die_glocke(version="style_embedding_test_no_style",
-    #            model_id="Poetry_StyleEmbedding",
-    #            exec_device=exec_device,
-    #            arousal=None,
-    #            rhythm=None
-    #            #speaker_reference=merged_speaker_references
-    #            )
+    die_glocke(version="style_embedding_test_no_style",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+               arousal=None,
+               rhythm=None
+               #speaker_reference=merged_speaker_references
+               )
     
-    # vergissmeinnicht(version="style_embedding_test_no_style",
-    #            model_id="Poetry_StyleEmbedding",
-    #            exec_device=exec_device,
-    #             arousal=None,
-    #             rhythm=None
-    #            #speaker_reference=merged_speaker_references
-    #            )
-
+    vergissmeinnicht(version="style_embedding_test_no_style",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+                arousal=None,
+                rhythm=None
+               #speaker_reference=merged_speaker_references
+               )
+    sys.exit(0)
     # die_glocke(version="style_embedding_test_with_uttembed",
     #            model_id="Poetry_StyleEmbedding",
     #            exec_device=exec_device,
