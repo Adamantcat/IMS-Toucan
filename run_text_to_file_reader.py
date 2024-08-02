@@ -5,14 +5,20 @@ import torch
 from InferenceInterfaces.ToucanTTSInterface import ToucanTTSInterface
 
 
-def read_texts(model_id, sentence, filename, device="cpu", language="eng", speaker_reference=None, duration_scaling_factor=1.0):
+def read_texts(model_id, sentence, filename, device="cpu", language="eng", speaker_reference=None, duration_scaling_factor=1.0, arousal=None, rhythm=None):
     tts = ToucanTTSInterface(device=device, tts_model_path=model_id)
     tts.set_language(language)
     if speaker_reference is not None:
         tts.set_utterance_embedding(speaker_reference)
     if type(sentence) == str:
         sentence = [sentence]
-    tts.read_to_file(text_list=sentence, file_location=filename, duration_scaling_factor=duration_scaling_factor)
+    if type(arousal) == float:
+        arousal = [arousal]
+    if type(rhythm) == float:
+        rhythm = [rhythm]
+    print("arousal: ", arousal)
+    print("rhythm: ", rhythm)
+    tts.read_to_file(text_list=sentence, file_location=filename, duration_scaling_factor=duration_scaling_factor, arousal_list=arousal, rhythm_list=rhythm)
     del tts
 
 
@@ -53,7 +59,7 @@ And touched the sound, of silence."""],
                speaker_reference=speaker_reference)
 
 
-def die_glocke(version, model_id="Meta", exec_device="cpu", speaker_reference=None):
+def die_glocke(version, model_id="Meta", exec_device="cpu", speaker_reference=None, arousal=None, rhythm=None):
     os.makedirs("audios", exist_ok=True)
 
     read_texts(model_id=model_id,
@@ -64,9 +70,11 @@ def die_glocke(version, model_id="Meta", exec_device="cpu", speaker_reference=No
                filename=f"audios/{version}_die_glocke.wav",
                device=exec_device,
                language="deu",
-               speaker_reference=speaker_reference)
+               speaker_reference=speaker_reference,
+               arousal=arousal,
+               rhythm=rhythm)
 
-def vergissmeinnicht(version, model_id="Meta", exec_device="cpu", speaker_reference=None):
+def vergissmeinnicht(version, model_id="Meta", exec_device="cpu", speaker_reference=None, arousal=None, rhythm=None):
     os.makedirs("audios", exist_ok=True)
 
     read_texts(model_id=model_id,
@@ -77,7 +85,9 @@ def vergissmeinnicht(version, model_id="Meta", exec_device="cpu", speaker_refere
                filename=f"audios/{version}_vergissmeinnicht.wav",
                device=exec_device,
                language="deu",
-               speaker_reference=speaker_reference)
+               speaker_reference=speaker_reference,
+               arousal=arousal,
+               rhythm=rhythm)
 
 
 def viet_poem(version, model_id="Meta", exec_device="cpu", speaker_reference=None):
@@ -105,7 +115,9 @@ def viet_poem(version, model_id="Meta", exec_device="cpu", speaker_reference=Non
 
 
 if __name__ == '__main__':
-    exec_device = "cuda" if torch.cuda.is_available() else "cpu"
+    import sys
+    # exec_device = "cuda" if torch.cuda.is_available() else "cpu"
+    exec_device = "cpu"
     print(f"running on {exec_device}")
 
    # merged_speaker_references = ["audios/speaker_references/" + ref for ref in os.listdir("audios/speaker_references/")]
@@ -116,17 +128,171 @@ if __name__ == '__main__':
     #                             #speaker_reference=merged_speaker_references
     #                             )
 
-    die_glocke(version="verse_boundary_test",
-               model_id="Verse_Boundary",
+    # die_glocke(version="style_embedding_test_no_style",
+    #            model_id="Poetry_StyleEmbedding",
+    #            exec_device=exec_device,
+    #            arousal=None,
+    #            rhythm=None
+    #            #speaker_reference=merged_speaker_references
+    #            )
+    
+    # vergissmeinnicht(version="style_embedding_test_no_style",
+    #            model_id="Poetry_StyleEmbedding",
+    #            exec_device=exec_device,
+    #             arousal=None,
+    #             rhythm=None
+    #            #speaker_reference=merged_speaker_references
+    #            )
+
+    # die_glocke(version="style_embedding_test_with_uttembed",
+    #            model_id="Poetry_StyleEmbedding",
+    #            exec_device=exec_device,
+    #            arousal=0.8,
+    #            rhythm=4.0,
+    #            speaker_reference="/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/Sprechweisen/tts-ayd-0450-m01-s02-t02-v01/tts-ayd-0450-m01-s02-t02-v01_2.wav"
+    #            )
+  
+    # arousal only, high
+    die_glocke(version="style_embedding_test_a0.8_rNone",
+               model_id="Poetry_StyleEmbedding",
                exec_device=exec_device,
+               arousal=0.8,
+               rhythm=None
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="verse_boundary_test",
-               model_id="Verse_Boundary",
+    vergissmeinnicht(version="style_embedding_test_a0.8_rNone",
+               model_id="Poetry_StyleEmbedding",
                exec_device=exec_device,
+                arousal=0.8,
+                rhythm=None
                #speaker_reference=merged_speaker_references
                )
+    
+    # arousal only, low
+    die_glocke(version="style_embedding_test_a0.1_rNone",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+               arousal=0.1,
+               rhythm=None
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_test_a0.1_rNone",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+                arousal=0.1,
+                rhythm=None
+               #speaker_reference=merged_speaker_references
+               )
+    
+    # rhythm only, high
+    die_glocke(version="style_embedding_test_aNone_r4.0",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+               arousal=None,
+               rhythm=4.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_test_aNone_r4.0",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+                arousal=None,
+                rhythm=4.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    # rhythm only, low
+    die_glocke(version="style_embedding_test_aNone_r0.2",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+               arousal=None,
+               rhythm=0.2
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_test_aNone_r0.2",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+                arousal=None,
+                rhythm=0.2
+               #speaker_reference=merged_speaker_references
+               )
+    
+    sys.exit(0)
+    
+    # arousal hoch, rythm hoch
+    die_glocke(version="style_embedding_test_a0.8_r4.0",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+               arousal=0.8,
+               rhythm=4.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_test_a0.8_r4.0",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+                arousal=0.8,
+                rhythm=4.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    # arousal low, rhythm low
+    die_glocke(version="style_embedding_test_a0.1_r0.2",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+               arousal=0.1,
+               rhythm=0.2
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_test_a0.1_r0.2",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+                arousal=0.1,
+                rhythm=0.2
+               #speaker_reference=merged_speaker_references
+               )
+    
+    # arousal high, rhythm low
+    die_glocke(version="style_embedding_test_a0.8_r0.2",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+               arousal=0.8,
+               rhythm=0.2
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_test_a0.8_r0.2",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+                arousal=0.8,
+                rhythm=0.2
+               #speaker_reference=merged_speaker_references
+               )
+    
+    # arousal low, rhythm high
+    die_glocke(version="style_embedding_test_a0.1_r4.0",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+               arousal=0.1,
+               rhythm=4.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_test_a0.1_r4.0",
+               model_id="Poetry_StyleEmbedding",
+               exec_device=exec_device,
+                arousal=0.1,
+                rhythm=4.0
+               #speaker_reference=merged_speaker_references
+               )
+
+
+
+
 
     # viet_poem(version="new_voc",
     #           model_id="Meta",

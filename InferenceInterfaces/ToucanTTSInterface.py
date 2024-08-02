@@ -147,6 +147,8 @@ class ToucanTTSInterface(torch.nn.Module):
                 durations=None,
                 pitch=None,
                 energy=None,
+                arousal=None,
+                rhythm=None,
                 input_is_phones=False,
                 return_plot_as_filepath=False,
                 loudness_in_db=-24.0,
@@ -170,6 +172,8 @@ class ToucanTTSInterface(torch.nn.Module):
                                                            durations=durations,
                                                            pitch=pitch,
                                                            energy=energy,
+                                                           arousal=arousal,
+                                                           rhythm=rhythm,
                                                            lang_id=self.lang_id,
                                                            duration_scaling_factor=duration_scaling_factor,
                                                            pitch_variance_scale=pitch_variance_scale,
@@ -248,6 +252,8 @@ class ToucanTTSInterface(torch.nn.Module):
                      dur_list=None,
                      pitch_list=None,
                      energy_list=None,
+                     arousal_list=None,
+                     rhythm_list=None,
                      glow_sampling_temperature=0.2):
         """
         Args:
@@ -273,9 +279,13 @@ class ToucanTTSInterface(torch.nn.Module):
             pitch_list = []
         if not energy_list:
             energy_list = []
+        if not arousal_list:
+            arousal_list = []
+        if not rhythm_list:
+            rhythm_list = []
         silence = torch.zeros([14300])
         wav = silence.clone()
-        for (text, durations, pitch, energy) in itertools.zip_longest(text_list, dur_list, pitch_list, energy_list):
+        for (text, durations, pitch, energy, arousal, rhythm) in itertools.zip_longest(text_list, dur_list, pitch_list, energy_list, arousal_list, rhythm_list):
             if text.strip() != "":
                 if not silent:
                     print("Now synthesizing: {}".format(text))
@@ -283,6 +293,8 @@ class ToucanTTSInterface(torch.nn.Module):
                                            durations=durations.to(self.device) if durations is not None else None,
                                            pitch=pitch.to(self.device) if pitch is not None else None,
                                            energy=energy.to(self.device) if energy is not None else None,
+                                           arousal=torch.tensor(arousal).float() if arousal is not None else None,
+                                           rhythm=torch.tensor(rhythm).float() if rhythm is not None else None,
                                            duration_scaling_factor=duration_scaling_factor,
                                            pitch_variance_scale=pitch_variance_scale,
                                            energy_variance_scale=energy_variance_scale,

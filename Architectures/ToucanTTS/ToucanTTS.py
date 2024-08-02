@@ -189,9 +189,9 @@ class ToucanTTS(torch.nn.Module):
             self.aroual_emebdding = torch.nn.Linear(1, style_embed_dim)
             self.rythm_emebdding = torch.nn.Linear(1, style_embed_dim)
             # self.squeeze_excitation = SqueezeExcitation(2 * style_embed_dim, 256)
-            self.style_embedding_projection = torch.nn.Linear(2 * style_embed_dim, 256)                                          
-            self.style_embbeding_infusion = AdaIN1d(style_dim=256, num_features=attention_dimension)
-        # print("ToucanTTS style_embed_dim: ", style_embed_dim)
+            self.style_embedding_projection = torch.nn.Linear(2 * style_embed_dim, style_embed_dim)                                          
+            self.style_embbeding_infusion = AdaIN1d(style_dim=style_embed_dim, num_features=attention_dimension)
+        print("ToucanTTS style_embed_dim: ", style_embed_dim)
         # print("ToucanTTS utt_embed_dim: ", utt_embed_dim)
 
 
