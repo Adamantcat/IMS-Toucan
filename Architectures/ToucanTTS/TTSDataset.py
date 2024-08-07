@@ -16,7 +16,10 @@ from Preprocessing.TextFrontend import get_language_id
 from Preprocessing.articulatory_features import get_feature_to_index_lookup
 from Utility.utils import remove_elements
 from Utility.VadClassifier import VADClassifier
-from Utility import Beat
+# from Utility import Beat
+import librosa
+from librosa.beat import beat_track
+from thebeat import Sequence, stats
 import numpy as np
 
 
@@ -164,18 +167,26 @@ class TTSDataset(Dataset):
                                   durations=cached_duration.unsqueeze(0),
                                   durations_lengths=torch.LongTensor([len(cached_duration)]))[0].squeeze(0).cpu()
             
+            print(filepaths[index])
             cached_vad = vad_classifier.predict_emotions([decoded_wave])[0] # vad takes a list of wavs as input and outputs a list of [arousal, dominance, valence]
             # print(cached_vad)
+            try:
+                sr = 16000
+                onset_env = librosa.onset.onset_strength(y=decoded_wave.cpu().numpy().astype(np.double), sr=sr,
+                                            aggregate=np.median)
+                tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env, sr=sr, tightness=1) # detect energy onsets and place beats on onstes
+                print(tempo, beats)
 
-            #print(decoded_wave.shape)
-            tempo_1, beats_1, cumscore_1 = Beat.calculate_beat_stats(decoded_wave.cpu().numpy().astype(np.double), sr=16000, tightness_score=1, onset_type="onsetstrength", start_bpm=120)
-            beat_score_1 = np.max(cumscore_1) / len(beats_1)
+                timestamps = librosa.frames_to_time(beats, sr=sr) # get timestamps of beat locations
+                print(timestamps)
 
-            tempo_1000, beats_1000, cumscore_1000 = Beat.calculate_beat_stats(decoded_wave.cpu().numpy().astype(np.double), 16000, tightness_score=1000, onset_type="onsetstrength", start_bpm=120)
-            beat_score_1000 = np.max(cumscore_1000) / len(beats_1000)
-
-            cached_beat = beat_score_1 - beat_score_1000
-            print("beat score: ", cached_beat)
+                seq = Sequence.from_onsets(timestamps) # get inter-onset-intervals 
+                print(seq.iois)
+                cached_npvi = stats.get_npvi(seq) # caclulate normalized pairwise variability index
+                print("npvi: ", cached_npvi)
+            except:
+                print(f"Problem with an audio file: {filepaths[index]}")
+                continue
 
             self.datapoints.append([text,  # text tensor
                                     torch.LongTensor([len(text)]),  # length of text tensor
@@ -187,7 +198,7 @@ class TTSDataset(Dataset):
                                     speaker_embeddings[index],  # speaker embedding,
                                     filepaths[index],  # path to the associated original raw audio file,
                                     cached_vad,  # [arousal, dominance, valence]
-                                    cached_beat
+                                    cached_npvi # Rhythm metric. High value = high variability = less rhythmic
                                     ])
             self.ctc_losses.append(ctc_loss)
 

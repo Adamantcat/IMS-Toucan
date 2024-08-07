@@ -25,7 +25,7 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
     if model_dir is not None:
         save_dir = model_dir
     else:
-        save_dir = os.path.join(MODELS_DIR, "ToucanTTS_Poetry_StyleEmbedding_64dim")
+        save_dir = os.path.join(MODELS_DIR, "ToucanTTS_StyleEmbedding_nPVI")
     os.makedirs(save_dir, exist_ok=True)
 
     if gpu_count > 1:
@@ -36,14 +36,14 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
         rank = 0
 
     train_set = prepare_tts_corpus(transcript_dict=build_path_to_transcript_dict_poetry(),
-                                   corpus_dir=os.path.join(PREPROCESSING_DIR, "Test"),
+                                   corpus_dir=os.path.join(PREPROCESSING_DIR, "Test_nPVI"),
                                    lang="deu",
                                    fine_tune_aligner=False,
                                    save_imgs=True,
                                    gpu_count=gpu_count,
                                    rank=rank)
 
-    model = ToucanTTS(style_embed_dim=64)
+    model = ToucanTTS()
 
     if gpu_count > 1:
         model.to(rank)

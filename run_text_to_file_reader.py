@@ -128,165 +128,165 @@ if __name__ == '__main__':
     #                             #speaker_reference=merged_speaker_references
     #                             )
 
-    die_glocke(version="style_embedding_test_no_style",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-               arousal=None,
-               rhythm=None
-               #speaker_reference=merged_speaker_references
-               )
-    
-    vergissmeinnicht(version="style_embedding_test_no_style",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-                arousal=None,
-                rhythm=None
-               #speaker_reference=merged_speaker_references
-               )
-    sys.exit(0)
-    # die_glocke(version="style_embedding_test_with_uttembed",
-    #            model_id="Poetry_StyleEmbedding",
+    # die_glocke(version="style_embedding_NoStyle_no_style",
+    #            model_id="Poetry_NoStyle",
     #            exec_device=exec_device,
-    #            arousal=0.8,
-    #            rhythm=4.0,
+    #            arousal=None,
+    #            rhythm=None
+    #            #speaker_reference=merged_speaker_references
+    #            )
+    
+    # vergissmeinnicht(version="style_embedding_NoStyle_no_style",
+    #            model_id="Poetry_NoStyle",
+    #            exec_device=exec_device,
+    #             arousal=None,
+    #             rhythm=None
+    #            #speaker_reference=merged_speaker_references
+    #            )
+
+    # die_glocke(version="style_embedding_NoStyle_with_uttembed",
+    #            model_id="Poetry_NoStyle",
+    #            exec_device=exec_device,
+    #            arousal=None,
+    #            rhythm=None,
     #            speaker_reference="/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/Sprechweisen/tts-ayd-0450-m01-s02-t02-v01/tts-ayd-0450-m01-s02-t02-v01_2.wav"
     #            )
   
     # arousal only, high
-    die_glocke(version="style_embedding_test_a0.8_rNone",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-               arousal=0.8,
-               rhythm=None
-               #speaker_reference=merged_speaker_references
-               )
+    # die_glocke(version="style_embedding_beat100_a0.8_rNone",
+    #            model_id="Poetry_StyleEmbedding_beat100",
+    #            exec_device=exec_device,
+    #            arousal=0.8,
+    #            rhythm=None
+    #            #speaker_reference=merged_speaker_references
+    #            )
     
-    vergissmeinnicht(version="style_embedding_test_a0.8_rNone",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-                arousal=0.8,
-                rhythm=None
-               #speaker_reference=merged_speaker_references
-               )
+    # vergissmeinnicht(version="style_embedding_beat100_a0.8_rNone",
+    #            model_id="Poetry_StyleEmbedding_beat100",
+    #            exec_device=exec_device,
+    #             arousal=0.8,
+    #             rhythm=None
+    #            #speaker_reference=merged_speaker_references
+    #            )
     
     # arousal only, low
-    die_glocke(version="style_embedding_test_a0.1_rNone",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-               arousal=0.1,
-               rhythm=None
-               #speaker_reference=merged_speaker_references
-               )
+    # die_glocke(version="style_embedding_beat100_a0.1_rNone",
+    #            model_id="Poetry_StyleEmbedding_beat100",
+    #            exec_device=exec_device,
+    #            arousal=0.1,
+    #            rhythm=None
+    #            #speaker_reference=merged_speaker_references
+    #            )
     
-    vergissmeinnicht(version="style_embedding_test_a0.1_rNone",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-                arousal=0.1,
-                rhythm=None
-               #speaker_reference=merged_speaker_references
-               )
+    # vergissmeinnicht(version="style_embedding_beat100_a0.1_rNone",
+    #            model_id="Poetry_StyleEmbedding_beat100",
+    #            exec_device=exec_device,
+    #             arousal=0.1,
+    #             rhythm=None
+    #            #speaker_reference=merged_speaker_references
+    #            )
     
     # rhythm only, high
-    die_glocke(version="style_embedding_test_aNone_r4.0",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-               arousal=None,
-               rhythm=4.0
-               #speaker_reference=merged_speaker_references
-               )
+    # die_glocke(version="style_embedding_beat100_aNone_r4.0",
+    #            model_id="Poetry_StyleEmbedding_beat100",
+    #            exec_device=exec_device,
+    #            arousal=None,
+    #            rhythm=4.0
+    #            #speaker_reference=merged_speaker_references
+    #            )
     
-    vergissmeinnicht(version="style_embedding_test_aNone_r4.0",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-                arousal=None,
-                rhythm=4.0
-               #speaker_reference=merged_speaker_references
-               )
+    # vergissmeinnicht(version="style_embedding_beat100_aNone_r4.0",
+    #            model_id="Poetry_StyleEmbedding_beat100",
+    #            exec_device=exec_device,
+    #             arousal=None,
+    #             rhythm=4.0
+    #            #speaker_reference=merged_speaker_references
+    #            )
     
     # rhythm only, low
-    die_glocke(version="style_embedding_test_aNone_r0.2",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-               arousal=None,
-               rhythm=0.2
-               #speaker_reference=merged_speaker_references
-               )
+    # die_glocke(version="style_embedding_beat100_aNone_r0.2",
+    #            model_id="Poetry_StyleEmbedding_beat100",
+    #            exec_device=exec_device,
+    #            arousal=None,
+    #            rhythm=0.2
+    #            #speaker_reference=merged_speaker_references
+    #            )
     
-    vergissmeinnicht(version="style_embedding_test_aNone_r0.2",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-                arousal=None,
-                rhythm=0.2
-               #speaker_reference=merged_speaker_references
-               )
+    # vergissmeinnicht(version="style_embedding_beat100_aNone_r0.2",
+    #            model_id="Poetry_StyleEmbedding_beat100",
+    #            exec_device=exec_device,
+    #             arousal=None,
+    #             rhythm=0.2
+    #            #speaker_reference=merged_speaker_references
+    #            )
     
-    sys.exit(0)
+    # sys.exit(0)
     
-    # arousal hoch, rythm hoch
-    die_glocke(version="style_embedding_test_a0.8_r4.0",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-               arousal=0.8,
-               rhythm=4.0
-               #speaker_reference=merged_speaker_references
-               )
-    
-    vergissmeinnicht(version="style_embedding_test_a0.8_r4.0",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-                arousal=0.8,
-                rhythm=4.0
-               #speaker_reference=merged_speaker_references
-               )
-    
-    # arousal low, rhythm low
-    die_glocke(version="style_embedding_test_a0.1_r0.2",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-               arousal=0.1,
-               rhythm=0.2
-               #speaker_reference=merged_speaker_references
-               )
-    
-    vergissmeinnicht(version="style_embedding_test_a0.1_r0.2",
-               model_id="Poetry_StyleEmbedding",
-               exec_device=exec_device,
-                arousal=0.1,
-                rhythm=0.2
-               #speaker_reference=merged_speaker_references
-               )
-    
-    # arousal high, rhythm low
-    die_glocke(version="style_embedding_test_a0.8_r0.2",
-               model_id="Poetry_StyleEmbedding",
+    # arousal high, npvi high (not rhythmic)
+    die_glocke(version="style_embedding_nPVI_a0.8_r20.0",
+               model_id="StyleEmbedding_nPVI",
                exec_device=exec_device,
                arousal=0.8,
-               rhythm=0.2
+               rhythm=20.0
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="style_embedding_test_a0.8_r0.2",
-               model_id="Poetry_StyleEmbedding",
+    vergissmeinnicht(version="style_embedding_nPVI_a0.8_r20.0",
+               model_id="StyleEmbedding_nPVI",
                exec_device=exec_device,
                 arousal=0.8,
-                rhythm=0.2
+                rhythm=20.0
                #speaker_reference=merged_speaker_references
                )
     
-    # arousal low, rhythm high
-    die_glocke(version="style_embedding_test_a0.1_r4.0",
-               model_id="Poetry_StyleEmbedding",
+    # arousal low, npvi low (very rhythmic)
+    die_glocke(version="style_embedding_nPVI_a0.2_r10.0",
+               model_id="StyleEmbedding_nPVI",
                exec_device=exec_device,
-               arousal=0.1,
-               rhythm=4.0
+               arousal=0.2,
+               rhythm=10.0
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="style_embedding_test_a0.1_r4.0",
-               model_id="Poetry_StyleEmbedding",
+    vergissmeinnicht(version="style_embedding_nPVI_a0.2_r10.0",
+               model_id="StyleEmbedding_nPVI",
                exec_device=exec_device,
-                arousal=0.1,
-                rhythm=4.0
+                arousal=0.2,
+                rhythm=10.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    # arousal high, npvi low
+    die_glocke(version="style_embedding_nPVI_a0.8_r10.0",
+               model_id="StyleEmbedding_nPVI",
+               exec_device=exec_device,
+               arousal=0.8,
+               rhythm=10.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_nPVI_a0.8_r10.0",
+               model_id="StyleEmbedding_nPVI",
+               exec_device=exec_device,
+                arousal=0.8,
+                rhythm=10.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    # arousal low, nPVI high
+    die_glocke(version="style_embedding_nPVI_a0.2_r20.0",
+               model_id="StyleEmbedding_nPVI",
+               exec_device=exec_device,
+               arousal=0.2,
+               rhythm=20.0
+               #speaker_reference=merged_speaker_references
+               )
+    
+    vergissmeinnicht(version="style_embedding_nPVI_a0.2_r20.0",
+               model_id="StyleEmbedding_nPVI",
+               exec_device=exec_device,
+                arousal=0.2,
+                rhythm=20.0
                #speaker_reference=merged_speaker_references
                )
 
