@@ -104,7 +104,7 @@ class ToucanTTS(torch.nn.Module):
                  lang_emb_size=16,
                 #  arousal_embed_dim=256,
                 #  rhythm_embed_dim=256,
-                 style_embed_dim=256,
+                 style_embed_dim=64,
                  integrate_language_embedding_into_encoder_out=True,
                  embedding_integration="AdaIN",  # ["AdaIN" | "ConditionalLayerNorm" | "ConcatProject"]
                  ):
@@ -188,7 +188,7 @@ class ToucanTTS(torch.nn.Module):
             self.style_embed_dim = style_embed_dim
             self.aroual_emebdding = torch.nn.Linear(1, style_embed_dim)
             self.rythm_emebdding = torch.nn.Linear(1, style_embed_dim)
-            # self.squeeze_excitation = SqueezeExcitation(2 * style_embed_dim, 256)
+            self.squeeze_excitation = SqueezeExcitation(2 * style_embed_dim, 256)
             self.style_embedding_projection = torch.nn.Linear(2 * style_embed_dim, style_embed_dim)                                          
             self.style_embbeding_infusion = AdaIN1d(style_dim=style_embed_dim, num_features=attention_dimension)
         print("ToucanTTS style_embed_dim: ", style_embed_dim)
@@ -409,13 +409,12 @@ class ToucanTTS(torch.nn.Module):
                 # print("ToucanTTS arousal embed shape: ", embedded_arousal.shape)
                 # print("ToucanTTS rhythm embed shape: ", embedded_rhythm.shape)
                 style_embedding = torch.cat([embedded_arousal, embedded_rhythm],dim=-1)
-                # print("ToucanTTS concat embed shape: ", style_embedding.shape)
+                print("ToucanTTS concat embed shape: ", style_embedding.shape)
+                
+                style_embedding = self.squeeze_excitation(style_embedding.transpose(0, 1).unsqueeze(-1)).squeeze(-1).transpose(0, 1)
+                print("squeeze exitation: ", style_embedding.shape)
                 style_embedding = self.style_embedding_projection(style_embedding)
-                # print("ToucanTTS style embedding: ", style_embedding.shape)
-                # style_embedding = self.squeeze_excitation(style_embedding).squeeze(-1).transpose(0, 1)
-                # print("squeeze exitation: ", style_embedding.shape)
-
-                # style_embedding = self.squeeze_excitation(style_embedding.transpose(0, 1).unsqueeze(-1)).squeeze(-1).transpose(0, 1)
+                print("ToucanTTS style embedding: ", style_embedding.shape)
 
             elif arousal is not None and rhythm is None:
                 style_embedding = embedded_arousal
@@ -432,7 +431,7 @@ class ToucanTTS(torch.nn.Module):
         # if is_inference:
         #     style_embedding = style_embedding.unsqueeze(0) if style_embedding is not None else None
 
-        # print("ToucanTTS style emedding shape: ", style_embedding.shape if style_embedding is not None else None)
+        print("ToucanTTS style emedding shape: ", style_embedding.shape if style_embedding is not None else None)
 
         # encoding the texts
         text_masks = make_non_pad_mask(text_lengths, device=text_lengths.device).unsqueeze(-2)
