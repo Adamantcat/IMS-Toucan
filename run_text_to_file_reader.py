@@ -223,16 +223,15 @@ if __name__ == '__main__':
     # sys.exit(0)
     
     # arousal high, npvi high (not rhythmic)
-    die_glocke(version="style_embedding_nPVI_a0.8_r20.0",
-               model_id="StyleEmbedding_nPVI",
+    die_glocke(version="style_embedding_EncoderOut_a0.8_r20.0",
+               model_id="StyleEmbedding_64dim_EncoderOut",
                exec_device=exec_device,
                arousal=0.8,
-               rhythm=20.0
-               #speaker_reference=merged_speaker_references
+               rhythm=20.0,
+               speaker_reference=None
                )
-    
-    vergissmeinnicht(version="style_embedding_nPVI_a0.8_r20.0",
-               model_id="StyleEmbedding_nPVI",
+    vergissmeinnicht(version="style_embedding_EncoderOut_a0.8_r20.0",
+               model_id="StyleEmbedding_64dim_EncoderOut",
                exec_device=exec_device,
                 arousal=0.8,
                 rhythm=20.0
@@ -240,33 +239,33 @@ if __name__ == '__main__':
                )
     
     # arousal low, npvi low (very rhythmic)
-    die_glocke(version="style_embedding_nPVI_a0.2_r10.0",
-               model_id="StyleEmbedding_nPVI",
+    die_glocke(version="style_embedding_EncoderOut_a0.3_r10.0",
+               model_id="StyleEmbedding_64dim_EncoderOut",
                exec_device=exec_device,
-               arousal=0.2,
+               arousal=0.3,
                rhythm=10.0
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="style_embedding_nPVI_a0.2_r10.0",
-               model_id="StyleEmbedding_nPVI",
+    vergissmeinnicht(version="style_embedding_EncoderOut_a0.3_r10.0",
+               model_id="StyleEmbedding_64dim_EncoderOut",
                exec_device=exec_device,
-                arousal=0.2,
+                arousal=0.3,
                 rhythm=10.0
                #speaker_reference=merged_speaker_references
                )
     
     # arousal high, npvi low
-    die_glocke(version="style_embedding_nPVI_a0.8_r10.0",
-               model_id="StyleEmbedding_nPVI",
+    die_glocke(version="style_embedding_EncoderOut_a0.8_r10.0",
+               model_id="StyleEmbedding_64dim_EncoderOut",
                exec_device=exec_device,
                arousal=0.8,
                rhythm=10.0
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="style_embedding_nPVI_a0.8_r10.0",
-               model_id="StyleEmbedding_nPVI",
+    vergissmeinnicht(version="style_embedding_EncoderOut_a0.8_r10.0",
+               model_id="StyleEmbedding_64dim_EncoderOut",
                exec_device=exec_device,
                 arousal=0.8,
                 rhythm=10.0
@@ -274,18 +273,18 @@ if __name__ == '__main__':
                )
     
     # arousal low, nPVI high
-    die_glocke(version="style_embedding_nPVI_a0.2_r20.0",
-               model_id="StyleEmbedding_nPVI",
+    die_glocke(version="style_embedding_EncoderOut_a0.3_r20.0",
+               model_id="StyleEmbedding_64dim_EncoderOut",
                exec_device=exec_device,
-               arousal=0.2,
+               arousal=0.3,
                rhythm=20.0
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="style_embedding_nPVI_a0.2_r20.0",
-               model_id="StyleEmbedding_nPVI",
+    vergissmeinnicht(version="style_embedding_EncoderOut_a0.3_r20.0",
+               model_id="StyleEmbedding_64dim_EncoderOut",
                exec_device=exec_device,
-                arousal=0.2,
+                arousal=0.3,
                 rhythm=20.0
                #speaker_reference=merged_speaker_references
                )

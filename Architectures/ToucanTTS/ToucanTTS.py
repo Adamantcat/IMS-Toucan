@@ -188,10 +188,10 @@ class ToucanTTS(torch.nn.Module):
             self.style_embed_dim = style_embed_dim
             self.aroual_emebdding = torch.nn.Linear(1, style_embed_dim)
             self.rythm_emebdding = torch.nn.Linear(1, style_embed_dim)
-            self.squeeze_excitation = SqueezeExcitation(2 * style_embed_dim, 256)
+            self.squeeze_excitation = SqueezeExcitation(2 * style_embed_dim, style_embed_dim)
             self.style_embedding_projection = torch.nn.Linear(2 * style_embed_dim, style_embed_dim)                                          
             self.style_embbeding_infusion = AdaIN1d(style_dim=style_embed_dim, num_features=attention_dimension)
-        print("ToucanTTS style_embed_dim: ", style_embed_dim)
+        # print("ToucanTTS style_embed_dim: ", style_embed_dim)
         # print("ToucanTTS utt_embed_dim: ", utt_embed_dim)
 
 
@@ -212,7 +212,7 @@ class ToucanTTS(torch.nn.Module):
                                  cnn_module_kernel=conformer_encoder_kernel_size,
                                  zero_triu=False,
                                  utt_embed=utt_embed_dim,
-                                 style_embed=style_embed_dim,
+                                 # style_embed=style_embed_dim,
                                  lang_embs=lang_embs,
                                  lang_emb_size=lang_emb_size,
                                  use_output_norm=True,
@@ -225,6 +225,8 @@ class ToucanTTS(torch.nn.Module):
                 self.language_embedding_infusion = ConditionalLayerNorm(speaker_embedding_dim=lang_emb_size, hidden_dim=attention_dimension)
             else:
                 self.language_embedding_infusion = torch.nn.Linear(attention_dimension + lang_emb_size, attention_dimension)
+
+        
         
 
         self.duration_predictor = DurationPredictor(idim=attention_dimension, n_layers=duration_predictor_layers,
@@ -280,7 +282,7 @@ class ToucanTTS(torch.nn.Module):
                                  cnn_module_kernel=conformer_decoder_kernel_size,
                                  use_output_norm=embedding_integration not in ["AdaIN", "ConditionalLayerNorm"],
                                  utt_embed=utt_embed_dim,
-                                 style_embed=style_embed_dim,
+                                 # style_embed=style_embed_dim,
                                  embedding_integration=embedding_integration)
 
         # due to the nature of the residual vector quantization, we have to predict the codebooks in a hierarchical way.
@@ -409,12 +411,12 @@ class ToucanTTS(torch.nn.Module):
                 # print("ToucanTTS arousal embed shape: ", embedded_arousal.shape)
                 # print("ToucanTTS rhythm embed shape: ", embedded_rhythm.shape)
                 style_embedding = torch.cat([embedded_arousal, embedded_rhythm],dim=-1)
-                print("ToucanTTS concat embed shape: ", style_embedding.shape)
+                # print("ToucanTTS concat embed shape: ", style_embedding.shape)
                 
                 style_embedding = self.squeeze_excitation(style_embedding.transpose(0, 1).unsqueeze(-1)).squeeze(-1).transpose(0, 1)
-                print("squeeze exitation: ", style_embedding.shape)
+                # print("ToucanTTS squeeze exitation: ", style_embedding.shape)
                 style_embedding = self.style_embedding_projection(style_embedding)
-                print("ToucanTTS style embedding: ", style_embedding.shape)
+                # print("ToucanTTS style embedding: ", style_embedding.shape)
 
             elif arousal is not None and rhythm is None:
                 style_embedding = embedded_arousal
@@ -431,16 +433,20 @@ class ToucanTTS(torch.nn.Module):
         # if is_inference:
         #     style_embedding = style_embedding.unsqueeze(0) if style_embedding is not None else None
 
-        print("ToucanTTS style emedding shape: ", style_embedding.shape if style_embedding is not None else None)
+        # print("ToucanTTS style emedding shape: ", style_embedding.shape if style_embedding is not None else None)
 
         # encoding the texts
         text_masks = make_non_pad_mask(text_lengths, device=text_lengths.device).unsqueeze(-2)
         padding_masks = make_pad_mask(text_lengths, device=text_lengths.device)
-        encoded_texts, _ = self.encoder(text_tensors, text_masks, utterance_embedding=utterance_embedding, style_embedding=style_embedding, lang_ids=lang_ids)
-
+        # encoded_texts, _ = self.encoder(text_tensors, text_masks, utterance_embedding=utterance_embedding, style_embedding=style_embedding, lang_ids=lang_ids)
+        encoded_texts, _ = self.encoder(text_tensors, text_masks, utterance_embedding=utterance_embedding, lang_ids=lang_ids)
+        
         if self.integrate_language_embedding_into_encoder_out:
             lang_embs = self.encoder.language_embedding(lang_ids).squeeze(-1)
             encoded_texts = integrate_with_utt_embed(hs=encoded_texts, utt_embeddings=lang_embs, projection=self.language_embedding_infusion, embedding_training=self.use_conditional_layernorm_embedding_integration)
+
+        #integrate style embedding in encoder output
+        encoded_texts = integrate_with_utt_embed(hs=encoded_texts, utt_embeddings=style_embedding, projection=self.style_embbeding_infusion, embedding_training=True)
 
         if is_inference:
             # predicting pitch, energy and durations
@@ -474,7 +480,8 @@ class ToucanTTS(torch.nn.Module):
 
         # decoding spectrogram
         decoder_masks = make_non_pad_mask(speech_lengths, device=speech_lengths.device).unsqueeze(-2) if speech_lengths is not None and not is_inference else None
-        decoded_speech, _ = self.decoder(upsampled_enriched_encoded_texts, decoder_masks, utterance_embedding=utterance_embedding, style_embedding=style_embedding)
+        # decoded_speech, _ = self.decoder(upsampled_enriched_encoded_texts, decoder_masks, utterance_embedding=utterance_embedding, style_embedding=style_embedding)
+        decoded_speech, _ = self.decoder(upsampled_enriched_encoded_texts, decoder_masks, utterance_embedding=utterance_embedding)
 
         preliminary_spectrogram = self.output_projection(decoded_speech)
 

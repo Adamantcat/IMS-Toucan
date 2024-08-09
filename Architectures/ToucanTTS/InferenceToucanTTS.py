@@ -108,7 +108,7 @@ class ToucanTTS(torch.nn.Module):
                                  cnn_module_kernel=conformer_encoder_kernel_size,
                                  zero_triu=False,
                                  utt_embed=utt_embed_dim,
-                                 style_embed=style_embed_dim,
+                                 # style_embed=style_embed_dim,
                                  lang_embs=lang_embs,
                                  lang_emb_size=lang_emb_size,
                                  use_output_norm=True,
@@ -180,7 +180,7 @@ class ToucanTTS(torch.nn.Module):
                                  cnn_module_kernel=conformer_decoder_kernel_size,
                                  use_output_norm=not embedding_integration in ["AdaIN", "ConditionalLayerNorm"],
                                  utt_embed=utt_embed_dim,
-                                 style_embed=style_embed_dim,
+                                 # style_embed=style_embed_dim,
                                  embedding_integration=embedding_integration)
 
         self.output_projection = torch.nn.Linear(attention_dimension, 128)
@@ -242,12 +242,12 @@ class ToucanTTS(torch.nn.Module):
                 # print("ToucanTTS arousal embed shape: ", embedded_arousal.shape)
                 # print("ToucanTTS rhythm embed shape: ", embedded_rhythm.shape)
                 style_embedding = torch.cat([embedded_arousal, embedded_rhythm],dim=-1)
-                print("InferenceToucanTTS concat embed shape: ", style_embedding.shape)
+                # print("InferenceToucanTTS concat embed shape: ", style_embedding.shape)
                 
                 style_embedding = self.squeeze_excitation(style_embedding.transpose(0, 1).unsqueeze(-1)).squeeze(-1).transpose(0, 1)
-                print("InferenceToucanTTS squeeze exitation: ", style_embedding.shape)
+                # print("InferenceToucanTTS squeeze exitation: ", style_embedding.shape)
                 style_embedding = self.style_embedding_projection(style_embedding)
-                print("InferenceToucanTTS style embedding: ", style_embedding.shape)
+                # print("InferenceToucanTTS style embedding: ", style_embedding.shape)
 
             elif arousal is not None and rhythm is None:
                 style_embedding = embedded_arousal
@@ -262,11 +262,15 @@ class ToucanTTS(torch.nn.Module):
 
         # encoding the texts
         text_masks = make_non_pad_mask(text_lengths, device=text_lengths.device).unsqueeze(-2)
-        encoded_texts, _ = self.encoder(text_tensors, text_masks, utterance_embedding=utterance_embedding, style_embedding=style_embedding, lang_ids=lang_ids)
+        # encoded_texts, _ = self.encoder(text_tensors, text_masks, utterance_embedding=utterance_embedding, style_embedding=style_embedding, lang_ids=lang_ids)
+        encoded_texts, _ = self.encoder(text_tensors, text_masks, utterance_embedding=utterance_embedding, lang_ids=lang_ids)
 
         if self.integrate_language_embedding_into_encoder_out:
             lang_embs = self.encoder.language_embedding(lang_ids).squeeze(-1).detach()
             encoded_texts = integrate_with_utt_embed(hs=encoded_texts, utt_embeddings=lang_embs, projection=self.language_embedding_infusion, embedding_training=self.use_conditional_layernorm_embedding_integration)
+        
+        #integrate style embedding in encoder output
+        encoded_texts = integrate_with_utt_embed(hs=encoded_texts, utt_embeddings=style_embedding, projection=self.style_embbeding_infusion, embedding_training=True)
 
         # predicting pitch, energy and durations
         pitch_predictions = self.pitch_predictor(encoded_texts, padding_mask=None, utt_embed=utterance_embedding, style_embed=style_embedding) if gold_pitch is None else gold_pitch
@@ -296,7 +300,8 @@ class ToucanTTS(torch.nn.Module):
         upsampled_enriched_encoded_texts = self.length_regulator(enriched_encoded_texts, predicted_durations)
 
         # decoding spectrogram
-        decoded_speech, _ = self.decoder(upsampled_enriched_encoded_texts, None, utterance_embedding=utterance_embedding, style_embedding=style_embedding)
+        # decoded_speech, _ = self.decoder(upsampled_enriched_encoded_texts, None, utterance_embedding=utterance_embedding, style_embedding=style_embedding)
+        decoded_speech, _ = self.decoder(upsampled_enriched_encoded_texts, None, utterance_embedding=utterance_embedding)
 
         frames = self.output_projection(decoded_speech)
 
