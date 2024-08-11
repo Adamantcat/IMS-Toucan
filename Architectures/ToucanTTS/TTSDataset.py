@@ -329,3 +329,19 @@ class TTSDataset(Dataset):
             self.datapoints.pop(remove_id)
         torch.save(self.datapoints, os.path.join(self.cache_dir, "tts_train_cache.pt"))
         print("Dataset updated!")
+
+    def normalize_arousal_rhythm(self):
+        arousals = [self.datapoints[index][9][0] for index in range(len(self.datapoints))]
+        a_max = max(arousals)
+        a_min = min(arousals)
+        normalized_arousals = (arousals - a_min) / (a_max - a_min)
+       
+
+        rhythms = [self.datapoints[index][10] for index in range(len(self.datapoints))]
+        r_max = max(rhythms)
+        r_min = min(rhythms)
+        normalized_rhythms = (rhythms - r_min) / (r_max - r_min)
+
+        for index in range(len(self.datapoints)):
+            self.datapoints[index][9][0] = normalized_arousals[index]
+            self.datapoints[index][10] = normalized_rhythms[index]

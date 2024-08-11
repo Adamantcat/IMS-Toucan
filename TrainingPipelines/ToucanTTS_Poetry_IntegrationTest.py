@@ -25,14 +25,13 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
     if model_dir is not None:
         save_dir = model_dir
     else:
-        save_dir = os.path.join(MODELS_DIR, "ToucanTTS_StyleEmbedding_64dim_EncoderOut")
+        save_dir = os.path.join(MODELS_DIR, "ToucanTTS_StyleEmbedding_normalized")
     os.makedirs(save_dir, exist_ok=True)
 
     if gpu_count > 1:
         rank = int(os.environ["LOCAL_RANK"])
         torch.cuda.set_device(rank)
-        # torch.distributed.init_process_group(backend="nccl")
-        torch.distributed.init_process_group(backend="nccl", init_method=f'tcp://141.58.127.129:23457', rank=rank, world_size=4)
+        torch.distributed.init_process_group(backend="nccl")
     else:
         rank = 0
 
@@ -43,6 +42,8 @@ def run(gpu_id, resume_checkpoint, finetune, model_dir, resume, use_wandb, wandb
                                    save_imgs=True,
                                    gpu_count=gpu_count,
                                    rank=rank)
+    
+    train_set.normalize_arousal_rhythm()
 
     model = ToucanTTS()
 
