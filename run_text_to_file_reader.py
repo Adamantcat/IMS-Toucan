@@ -222,70 +222,93 @@ if __name__ == '__main__':
     
     # sys.exit(0)
     
-    # arousal high, npvi high (not rhythmic)
-    die_glocke(version="style_embedding_EncoderOut_a0.8_r20.0",
-               model_id="StyleEmbedding_64dim_EncoderOut",
+    die_glocke(version="style_embedding_ConcatUttEmb_None",
+               model_id="CooncatUttEmbed",
+               exec_device=exec_device,
+               arousal=None,
+               rhythm=None,
+               # speaker_reference="/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/Sprechweisen/Hoelderlin_Traenen_Zischler_m_P_2020/Hoelderlin_Traenen_Zischler_m_P_2020_2.wav"
+               )
+
+    die_glocke(version="style_embedding_ConcatUttEmb_a0.8_r0.8_spkemb",
+               model_id="CooncatUttEmbed",
                exec_device=exec_device,
                arousal=0.8,
-               rhythm=20.0,
+               rhythm=0.8,
+               speaker_reference="/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/Sprechweisen/Hoelderlin_Traenen_Zischler_m_P_2020/Hoelderlin_Traenen_Zischler_m_P_2020_2.wav"
+               )
+    die_glocke(version="style_embedding_ConcatUttEmb_a0.2_r0.2_spkemb",
+               model_id="CooncatUttEmbed",
+               exec_device=exec_device,
+               arousal=0.2,
+               rhythm=0.2,
+               speaker_reference="/mount/arbeitsdaten/textklang/synthesis/Multispeaker_PoeticTTS_Data/Sprechweisen/Hoelderlin_Traenen_Zischler_m_P_2020/Hoelderlin_Traenen_Zischler_m_P_2020_2.wav"
+               )
+    
+    # arousal high, npvi high (not rhythmic)
+    die_glocke(version="style_embedding_ConcatUttEmb_a0.8_r0.8",
+               model_id="CooncatUttEmbed",
+               exec_device=exec_device,
+               arousal=0.8,
+               rhythm=0.8,
                speaker_reference=None
                )
-    vergissmeinnicht(version="style_embedding_EncoderOut_a0.8_r20.0",
-               model_id="StyleEmbedding_64dim_EncoderOut",
+    vergissmeinnicht(version="style_embedding_ConcatUttEmb_a0.8_r0.8",
+               model_id="CooncatUttEmbed",
                exec_device=exec_device,
                 arousal=0.8,
-                rhythm=20.0
+                rhythm=0.8
                #speaker_reference=merged_speaker_references
                )
     
     # arousal low, npvi low (very rhythmic)
-    die_glocke(version="style_embedding_EncoderOut_a0.3_r10.0",
-               model_id="StyleEmbedding_64dim_EncoderOut",
+    die_glocke(version="style_embedding_ConcatUttEmb_a0.2_r0.2",
+               model_id="CooncatUttEmbed",
                exec_device=exec_device,
-               arousal=0.3,
-               rhythm=10.0
+               arousal=0.2,
+               rhythm=0.2
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="style_embedding_EncoderOut_a0.3_r10.0",
-               model_id="StyleEmbedding_64dim_EncoderOut",
+    vergissmeinnicht(version="style_embedding_ConcatUttEmb_a0.2_r0.2",
+               model_id="CooncatUttEmbed",
                exec_device=exec_device,
-                arousal=0.3,
-                rhythm=10.0
+                arousal=0.2,
+                rhythm=0.2
                #speaker_reference=merged_speaker_references
                )
     
     # arousal high, npvi low
-    die_glocke(version="style_embedding_EncoderOut_a0.8_r10.0",
-               model_id="StyleEmbedding_64dim_EncoderOut",
+    die_glocke(version="style_embedding_ConcatUttEmb_a0.8_r0.2",
+               model_id="CooncatUttEmbed",
                exec_device=exec_device,
                arousal=0.8,
-               rhythm=10.0
+               rhythm=0.2
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="style_embedding_EncoderOut_a0.8_r10.0",
-               model_id="StyleEmbedding_64dim_EncoderOut",
+    vergissmeinnicht(version="style_embedding_ConcatUttEmb_a0.8_r0.2",
+               model_id="CooncatUttEmbed",
                exec_device=exec_device,
                 arousal=0.8,
-                rhythm=10.0
+                rhythm=0.2
                #speaker_reference=merged_speaker_references
                )
     
     # arousal low, nPVI high
-    die_glocke(version="style_embedding_EncoderOut_a0.3_r20.0",
-               model_id="StyleEmbedding_64dim_EncoderOut",
+    die_glocke(version="style_embedding_ConcatUttEmb_a0.2_r0.8",
+               model_id="CooncatUttEmbed",
                exec_device=exec_device,
-               arousal=0.3,
-               rhythm=20.0
+               arousal=0.2,
+               rhythm=0.8
                #speaker_reference=merged_speaker_references
                )
     
-    vergissmeinnicht(version="style_embedding_EncoderOut_a0.3_r20.0",
-               model_id="StyleEmbedding_64dim_EncoderOut",
+    vergissmeinnicht(version="style_embedding_ConcatUttEmb_a0.2_r0.8",
+               model_id="CooncatUttEmbed",
                exec_device=exec_device,
-                arousal=0.3,
-                rhythm=20.0
+                arousal=0.2,
+                rhythm=0.8
                #speaker_reference=merged_speaker_references
                )
 

@@ -32,7 +32,7 @@ class VariancePredictor(torch.nn.Module, ABC):
                  bias=True,
                  dropout_rate=0.5,
                  utt_embed_dim=None,
-                 style_embed_dim=None,
+                 # style_embed_dim=None,
                  embedding_integration="AdaIN"):
         """
         Initialize duration predictor module.
@@ -51,11 +51,11 @@ class VariancePredictor(torch.nn.Module, ABC):
         self.embedding_projections = torch.nn.ModuleList()
         self.style_embedding_projections = torch.nn.ModuleList()
         self.utt_embed_dim = utt_embed_dim
-        self.style_embed_dim = style_embed_dim
+        # self.style_embed_dim = style_embed_dim
         self.use_conditional_layernorm_embedding_integration = embedding_integration in ["AdaIN", "ConditionalLayerNorm"]
 
         for idx in range(n_layers):
-            if utt_embed_dim is not None or style_embed_dim is not None:
+            if utt_embed_dim is not None: #  or style_embed_dim is not None:
                 if utt_embed_dim is not None:
                     if embedding_integration == "AdaIN":
                         self.embedding_projections += [AdaIN1d(style_dim=utt_embed_dim, num_features=idim)]
@@ -64,8 +64,8 @@ class VariancePredictor(torch.nn.Module, ABC):
                     else:
                         self.embedding_projections += [torch.nn.Linear(utt_embed_dim + idim, idim)]
 
-                if style_embed_dim is not None:
-                    self.style_embedding_projections += [AdaIN1d(style_dim=style_embed_dim, num_features=idim)]
+                # if style_embed_dim is not None:
+                #     self.style_embedding_projections += [AdaIN1d(style_dim=style_embed_dim, num_features=idim)]
 
             # else:
             #     self.embedding_projections += [lambda x: x]
@@ -77,7 +77,7 @@ class VariancePredictor(torch.nn.Module, ABC):
 
         self.linear = torch.nn.Linear(n_chans, 1)
 
-    def forward(self, xs, padding_mask=None, utt_embed=None, style_embed=None):
+    def forward(self, xs, padding_mask=None, utt_embed=None): # , style_embed=None):
         """
         Calculate forward propagation.
 
@@ -91,12 +91,13 @@ class VariancePredictor(torch.nn.Module, ABC):
         """
         xs = xs.transpose(1, -1)  # (B, idim, Tmax)
 
-        for f, c, d, p, sp in zip(self.conv, self.norms, self.dropouts, self.embedding_projections, self.style_embedding_projections):
+        # for f, c, d, p, sp in zip(self.conv, self.norms, self.dropouts, self.embedding_projections, self.style_embedding_projections):
+        for f, c, d, p in zip(self.conv, self.norms, self.dropouts, self.embedding_projections):
             xs = f(xs)  # (B, C, Tmax)
             if self.utt_embed_dim is not None:
                 xs = integrate_with_utt_embed(hs=xs.transpose(1, 2), utt_embeddings=utt_embed, projection=p, embedding_training=self.use_conditional_layernorm_embedding_integration).transpose(1, 2)
-            if style_embed is not None:
-                xs = integrate_with_utt_embed(hs=xs.transpose(1, 2), utt_embeddings=style_embed, projection=sp, embedding_training=True).transpose(1, 2)
+            # if style_embed is not None:
+            #     xs = integrate_with_utt_embed(hs=xs.transpose(1, 2), utt_embeddings=style_embed, projection=sp, embedding_training=True).transpose(1, 2)
             xs = c(xs)
             xs = d(xs)
 
